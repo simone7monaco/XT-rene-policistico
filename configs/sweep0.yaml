@@ -1,0 +1,21 @@
+program: train.py
+method: grid
+metric:
+  goal: maximize
+  name: val_iou
+parameters:
+  config_path:
+    value: configs/default.yaml
+  batch_size:
+    values: [8, 16, 32]
+  optimizer:
+    values: [adam, adamp]
+  lr:
+    values: [0.01, 0.005, 0.001, 0.0005, 0.0001]
+  model:
+    values: [unet, upp]
+  scheduler:
+    values: [none, reducedonplateau, cosannealing]
+early_terminate:
+  type: hyperband
+  min_iter: 3

@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # Data directories
+configs/.DS_Store
 Images_original/
 images_original/
 annotations_original/
