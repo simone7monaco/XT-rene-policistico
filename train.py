@@ -1,17 +1,20 @@
 import argparse
 import os
 from pathlib import Path
+from zipfile import ZipFile
 import yaml
 import ast
+
 from utils import object_from_dict
 from experiment import SegmentCyst
-from pytorch_lightning.loggers import WandbLogger
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from sweep_params import get_sweep
 from crossval_perexp import split_dataset
 from Models.attention_unet import AttentionUnet
+
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 import wandb
 
@@ -20,6 +23,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
+    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset from wandb Artifact (v1, v2...), default is 'latest'.", default='latest')
     parser.add_argument("--batch_size", type=int, default=None, help="Batch size for sweep.")
     parser.add_argument("--lr", type=float, default=None, help="Lr for sweep.")
     parser.add_argument("--model", type=str, default=None, help="Model type for sweep.")
@@ -50,9 +54,13 @@ hparams = get_sweep(hparams, args)
 wandb.login()
 run = wandb.init(project="ca-net", entity="rene-policistico", config=hparams, settings=wandb.Settings(start_method='fork'))
 
-dataset = run.use_artifact('rene-policistico/upp/dataset:latest', type='dataset')
+dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
 data_dir = dataset.download()
 
+if not (Path(data_dir) / "images").exists():
+    zippath = next(Path(data_dir).iterdir())
+    with ZipFile(zippath, 'r') as zip_ref:
+        zip_ref.extractall(data_dir)
 
 hparams["image_path"] = Path(data_dir) / "images"
 hparams["mask_path"] = Path(data_dir) / "masks"
