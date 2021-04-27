@@ -64,12 +64,12 @@ train_aug:
 #         width: 512
 #         p: 1
       - __class_fullname__: albumentations.augmentations.transforms.CropNonEmptyMaskIfExists
-      always_apply: false
-      height: 512
-      ignore_channels:
-      - 1
-      p: 1
-      width: 512
+        always_apply: false
+        height: 512
+        ignore_channels:
+          - 1
+        p: 1
+        width: 512
       - __class_fullname__: albumentations.augmentations.transforms.HorizontalFlip
         always_apply: False
         p: 0.5

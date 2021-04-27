@@ -83,7 +83,7 @@ hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]
 hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
 checkpoint_callback = ModelCheckpoint(
-    filepath=hparams["checkpoint_callback"]["filepath"],
+    dirpath=hparams["checkpoint_callback"]["filepath"],
     monitor="val_iou",
     verbose=True,
     mode="max",
