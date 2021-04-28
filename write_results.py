@@ -339,152 +339,152 @@ def mcc(TP, TN, FP, FN, N=None):
 ##############################################################
 ##  Old
 #
-# def missed_wrong_cysts(gt, pred, min_area=50):
-#     detected = 0
-#     wrong = 0
-#     missed = 0
-#     state=[]
+def missed_wrong_cysts(gt, pred, min_area=50):
+    detected = 0
+    wrong = 0
+    missed = 0
+    state=[]
     
-#     gt_contours, _ = cv2.findContours(gt, cv2.RETR_TREE, 
-#                                     cv2.CHAIN_APPROX_SIMPLE) 
-#     pred_contours, _ = cv2.findContours(pred, cv2.RETR_TREE, 
-#                                     cv2.CHAIN_APPROX_SIMPLE) 
+    gt_contours, _ = cv2.findContours(gt, cv2.RETR_TREE, 
+                                    cv2.CHAIN_APPROX_SIMPLE) 
+    pred_contours, _ = cv2.findContours(pred, cv2.RETR_TREE, 
+                                    cv2.CHAIN_APPROX_SIMPLE) 
     
-#     gt_contours = [c for c in gt_contours if c.size > 2]
-# #     pred_contours = [c for c in pred_contours if cv2.contourArea(cv2.approxPolyDP(c, 2, closed=True)) > 0 and np.array(c).size > 2]
-#     pred_contours = [c for c in pred_contours if cv2.contourArea(c) > min_area]
-#     areas = [cv2.contourArea(c) for c in pred_contours]
+    gt_contours = [c for c in gt_contours if c.size > 2]
+#     pred_contours = [c for c in pred_contours if cv2.contourArea(cv2.approxPolyDP(c, 2, closed=True)) > 0 and np.array(c).size > 2]
+    pred_contours = [c for c in pred_contours if cv2.contourArea(c) > min_area]
+    areas = [cv2.contourArea(c) for c in pred_contours]
 
-#     centers = [center(c) for c in pred_contours]
+    centers = [center(c) for c in pred_contours]
     
-#     for c in pred_contours:
-#         single_pred = np.zeros_like(pred)
-#         cv2.fillPoly(single_pred, pts=[c], color=(1))
+    for c in pred_contours:
+        single_pred = np.zeros_like(pred)
+        cv2.fillPoly(single_pred, pts=[c], color=(1))
 
-#         if np.logical_and(single_pred, gt).any():
-#             detected += 1
-#             state.append('detected')
-#         else:
-#             wrong += 1
-#             state.append('wrong')
+        if np.logical_and(single_pred, gt).any():
+            detected += 1
+            state.append('detected')
+        else:
+            wrong += 1
+            state.append('wrong')
             
-#     for c in gt_contours:
-#         single_gt = np.zeros_like(gt)
-#         cv2.fillPoly(single_gt, pts=[c], color=(1))
+    for c in gt_contours:
+        single_gt = np.zeros_like(gt)
+        cv2.fillPoly(single_gt, pts=[c], color=(1))
 
-#         if not np.logical_and(single_gt, pred).any():
-#             missed += 1
-#             state.append('missed')
-#             areas.append(cv2.contourArea(c))
-#             centers.append(center(c))
+        if not np.logical_and(single_gt, pred).any():
+            missed += 1
+            state.append('missed')
+            areas.append(cv2.contourArea(c))
+            centers.append(center(c))
 
-#     areas = to_area_m(np.array(areas))
-#     return {
-#         '#cysts' : len(gt_contours), 
-#         'detected' : detected,
-#         'missed' : missed,
-#         'wrong' : wrong,
-#         'areas' : areas,
-#         'state' :state,
-#         'centers' : centers,
-#     } 
+    areas = to_area_m(np.array(areas))
+    return {
+        '#cysts' : len(gt_contours), 
+        'detected' : detected,
+        'missed' : missed,
+        'wrong' : wrong,
+        'areas' : areas,
+        'state' :state,
+        'centers' : centers,
+    } 
                                                              #
                                                             ##
 ##############################################################
 
 
-def missed_wrong_cysts(gt, pred, small_thresh=159, remove_thr=70):
-    detected_big = 0
-    missed_big = 0
-    detected_small = 0
-    missed_small = 0
-    total_small = 0
-    total_big = 0
-    overcounted_big = 0
-    overcounted_small = 0  
+# def missed_wrong_cysts(gt, pred, small_thresh=159, remove_thr=70):
+#     detected_big = 0
+#     missed_big = 0
+#     detected_small = 0
+#     missed_small = 0
+#     total_small = 0
+#     total_big = 0
+#     overcounted_big = 0
+#     overcounted_small = 0  
     
-    state = []
-    areas = []
-    centers = []
+#     state = []
+#     areas = []
+#     centers = []
 
-    gt_contours, _ = cv2.findContours(gt.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    pred_contours, _ = cv2.findContours(pred.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+#     gt_contours, _ = cv2.findContours(gt.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+#     pred_contours, _ = cv2.findContours(pred.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    gt_contours = [c for c in gt_contours if c.size > 2]
-    pred_contours = [c for c in pred_contours if c.size > 2]
+#     gt_contours = [c for c in gt_contours if c.size > 2]
+#     pred_contours = [c for c in pred_contours if c.size > 2]
     
-    gt_seps = np.array([csr_matrix(cv2.fillPoly(np.zeros_like(gt), pts=[c], color=(1))) for c in gt_contours], dtype=object)
+#     gt_seps = np.array([csr_matrix(cv2.fillPoly(np.zeros_like(gt), pts=[c], color=(1))) for c in gt_contours], dtype=object)
     
-    pred_seps = np.array([csr_matrix(cv2.fillPoly(np.zeros_like(gt), pts=[c], color=(1))) for c in pred_contours if cv2.contourArea(c) > remove_thr], dtype=object)
+#     pred_seps = np.array([csr_matrix(cv2.fillPoly(np.zeros_like(gt), pts=[c], color=(1))) for c in pred_contours if cv2.contourArea(c) > remove_thr], dtype=object)
 
-    detect_miss_list = np.array([False for _ in pred_seps])
+#     detect_miss_list = np.array([False for _ in pred_seps])
     
-    n_rem = len(pred_contours) - len(pred_seps)
+#     n_rem = len(pred_contours) - len(pred_seps)
 
-    for single_gt, c in zip(gt_seps, gt_contours):
-        area = cv2.contourArea(c)
-        if area > small_thresh:
-            total_big += 1
-            curr_detection = np.array([single_gt.multiply(sing_p).count_nonzero() for sing_p in pred_seps], dtype=bool)
-            if curr_detection.any():
-                detected_big += 1
-                overcounted_big += sum(curr_detection) - 1
-                state.append('detected')
-                areas.append(cv2.contourArea(c))
-                centers.append(center(c))
+#     for single_gt, c in zip(gt_seps, gt_contours):
+#         area = cv2.contourArea(c)
+#         if area > small_thresh:
+#             total_big += 1
+#             curr_detection = np.array([single_gt.multiply(sing_p).count_nonzero() for sing_p in pred_seps], dtype=bool)
+#             if curr_detection.any():
+#                 detected_big += 1
+#                 overcounted_big += sum(curr_detection) - 1
+#                 state.append('detected')
+#                 areas.append(cv2.contourArea(c))
+#                 centers.append(center(c))
 
-            else:
-                missed_big += 1
-                state.append('missed')
-                areas.append(cv2.contourArea(c))
-                centers.append(center(c))
+#             else:
+#                 missed_big += 1
+#                 state.append('missed')
+#                 areas.append(cv2.contourArea(c))
+#                 centers.append(center(c))
 
-        else:
-            total_small += 1
-            curr_detection = np.array([single_gt.multiply(sing_p).count_nonzero() for sing_p in pred_seps], dtype=bool)
-            if curr_detection.any():
-                detected_small += 1
-                overcounted_small += sum(curr_detection) - 1
-                state.append('detected')
-                areas.append(cv2.contourArea(c))
-                centers.append(center(c))
-            else:
-                missed_small += 1
-                state.append('missed')
-                areas.append(cv2.contourArea(c))
-                centers.append(center(c))
+#         else:
+#             total_small += 1
+#             curr_detection = np.array([single_gt.multiply(sing_p).count_nonzero() for sing_p in pred_seps], dtype=bool)
+#             if curr_detection.any():
+#                 detected_small += 1
+#                 overcounted_small += sum(curr_detection) - 1
+#                 state.append('detected')
+#                 areas.append(cv2.contourArea(c))
+#                 centers.append(center(c))
+#             else:
+#                 missed_small += 1
+#                 state.append('missed')
+#                 areas.append(cv2.contourArea(c))
+#                 centers.append(center(c))
 
         
-        detect_miss_list += curr_detection
+#         detect_miss_list += curr_detection
     
-    if len(pred_seps) == 0:
-        wrong_small = wrong_big = 0
-    else:
-        wrong_contours = [c for c in pred_contours if cv2.contourArea(c) > remove_thr]
-        wrong_contours = [c for c,t in zip(wrong_contours, ~detect_miss_list) if t]
-        areas += [cv2.contourArea(c) for c in wrong_contours]
-        centers += [center(c) for c in wrong_contours]
-        state += ['wrong' for c in wrong_contours]
+#     if len(pred_seps) == 0:
+#         wrong_small = wrong_big = 0
+#     else:
+#         wrong_contours = [c for c in pred_contours if cv2.contourArea(c) > remove_thr]
+#         wrong_contours = [c for c,t in zip(wrong_contours, ~detect_miss_list) if t]
+#         areas += [cv2.contourArea(c) for c in wrong_contours]
+#         centers += [center(c) for c in wrong_contours]
+#         state += ['wrong' for c in wrong_contours]
         
-        wrong_big = sum([True for c in wrong_contours if cv2.contourArea(c) > small_thresh])
-        wrong_small = sum(~detect_miss_list) - wrong_big
+#         wrong_big = sum([True for c in wrong_contours if cv2.contourArea(c) > small_thresh])
+#         wrong_small = sum(~detect_miss_list) - wrong_big
     
-    return {
-        '#cysts' : len(gt_seps), 
-        'detected' : detected_big + detected_small,
-        'missed' : missed_big + missed_small,
-        'wrong' : wrong_big + wrong_small,
-        'overcounted' : overcounted_big + overcounted_small,
-        'areas' : areas,
-        'state' :state,
-        'centers' : centers,
-    }
+#     return {
+#         '#cysts' : len(gt_seps), 
+#         'detected' : detected_big + detected_small,
+#         'missed' : missed_big + missed_small,
+#         'wrong' : wrong_big + wrong_small,
+#         'overcounted' : overcounted_big + overcounted_small,
+#         'areas' : areas,
+#         'state' :state,
+#         'centers' : centers,
+#     }
 
 
 def write_results(folder, is_jpg=False, mrange=None, memory=False):
     np.seterr('raise')
     ROOT = Path('.')
-    datafile = ROOT / folder / "summary_new.json"
+    datafile = ROOT / folder / "summary_old.json"
     res_model_PATH = ROOT / folder
     C = []
     
@@ -507,6 +507,7 @@ def write_results(folder, is_jpg=False, mrange=None, memory=False):
             
         s['tube_area'] = tube_area(name)
             
+        assert (real_mask_PATH / f'{name}.png').exists(), real_mask_PATH / f'{name}.png'
         gt = open_mask(real_mask_PATH / f'{name}.png')
         pred_img = open_mask(pred)
         
