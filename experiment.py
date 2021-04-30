@@ -134,30 +134,30 @@ class SegmentCyst(pl.LightningModule):
 
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
-        class_labels = {0: "background", 1: "cyst"}
-
-        batch_size = self.hparams["train_parameters"]["batch_size"]
-
-        for i in range(batch_size//2):
-            mask_img = wandb.Image(
-                features[i, :, :, :],
-                masks={
-                    "predictions": {
-                        "mask_data": logits_[i, 0, :, :],
-                        "class_labels": class_labels,
+#         batch_size = self.hparams["train_parameters"]["batch_size"]
+        
+        if self.trainer.current_epoch % 5 == 0:
+            class_labels = {0: "background", 1: "cyst"}
+            for i in range(features.shape[0]):
+                mask_img = wandb.Image(
+                    features[i, :, :, :],
+                    masks={
+                        "predictions": {
+                            "mask_data": logits_[i, 0, :, :],
+                            "class_labels": class_labels,
+                        },
+                        "groud_truth": {
+                            "mask_data": masks.cpu().detach().numpy()[i, 0, :, :],
+                            "class_labels": class_labels,
+                        },
                     },
-                    "groud_truth": {
-                        "mask_data": masks.cpu().detach().numpy()[i, 0, :, :],
-                        "class_labels": class_labels,
-                    },
-                },
-            )
-            fname = batch["image_id"][i]
-#             pred = Image.fromarray(np.uint8(255*logits_[i, 0, :, :]))
-#             pred.save(
-#                 f"./cyst_checkpoints/images/train_predictions/{fname}.png"
-#             )
-            self.logger.experiment.log({"generated_images": [mask_img]}, commit=False)
+                )
+                fname = batch["image_id"][i]
+    #             pred = Image.fromarray(np.uint8(255*logits_[i, 0, :, :]))
+    #             pred.save(
+    #                 f"./cyst_checkpoints/images/train_predictions/{fname}.png"
+    #             )
+                self.logger.experiment.log({"generated_images": [mask_img]}, commit=False)
             # self.log("images_train", mask_img)
 
         # print(logits.shape, features.shape)
@@ -188,7 +188,9 @@ class SegmentCyst(pl.LightningModule):
 
         logits = self.forward(features)
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
-
+        
+        print('>>>>')
+        print(masks.shape, logits.shape)
         result = {}
 
         if self.bce:
@@ -199,23 +201,24 @@ class SegmentCyst(pl.LightningModule):
                 result[f"valid_mask_{loss_name}"] = loss(logits, masks)
 
         result["val_iou"] = binary_mean_iou(logits, masks)
-        class_labels = {0: "background", 1: "cyst"}
-
-        mask_img = wandb.Image(
-            features[0, :, :, :],
-            masks={
-                "predictions": {
-                    "mask_data": logits_[0, 0, :, :],
-                    "class_labels": class_labels,
+        
+        if self.trainer.current_epoch % 5 == 0:
+            class_labels = {0: "background", 1: "cyst"}
+            mask_img = wandb.Image(
+                features[0, :, :, :],
+                masks={
+                    "predictions": {
+                        "mask_data": logits_[0, 0, :, :],
+                        "class_labels": class_labels,
+                    },
+                    "groud_truth": {
+                        "mask_data": masks.cpu().detach().numpy()[0, 0, :, :],
+                        "class_labels": class_labels,
+                    },
                 },
-                "groud_truth": {
-                    "mask_data": masks.cpu().detach().numpy()[0, 0, :, :],
-                    "class_labels": class_labels,
-                },
-            },
-        )
-
-        self.logger.experiment.log({"valid_images": [mask_img]}, commit=False)
+            )
+            self.logger.experiment.log({"valid_images": [mask_img]}, commit=False)
+            
         self.log("val_iou", result["val_iou"])
         return result
 

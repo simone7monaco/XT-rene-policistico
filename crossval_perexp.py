@@ -4,7 +4,8 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import torch
-from sklearn.model_selection import StratifiedKFold
+from sklearn.utils import shuffle
+from sklearn.model_selection import StratifiedKFold, GroupKFold
 import yaml
 import pickle
 from utils import object_from_dict, get_samples
@@ -21,6 +22,10 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
+    parser.add_argument("-k", "--kth_fold", type=int, help="Number of the fold to consider between 0 and 4.", required=True)
+    parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
+    parser.add_argument("-s", "--stratify_fold", nargs='?', default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
+    
     
     return parser.parse_args()
 
@@ -31,14 +36,13 @@ def date_to_exp(date):
     return date_exps[date]
 
 
-def split_dataset(hparams, exp=None):
+def split_dataset(hparams, k=0, test_list=None, strat_nogroups=False):
     samples = get_samples(hparams["image_path"], hparams["mask_path"])
-    skf = StratifiedKFold(n_splits=5, random_state=hparams["seed"], shuffle=True)
     
     names = [file[0].stem for file in samples]
     
 #     date, treatment, tube, zstack, side =
-    unpack = [unpack_name(name.strip()) for name in names]
+    unpack = [unpack_name(name) for name in names]
     df = pd.DataFrame([])
     df["filename"] = names
     df["treatment"] = [u[1] for u in unpack]
@@ -46,14 +50,20 @@ def split_dataset(hparams, exp=None):
     df["te"] = df.treatment + '_' + df.exp.astype(str)
     df.te = df.te.astype('category')
     
-    if exp is not None:
-        test_idx = df[df.exp==exp].index
+    if test_list is not None:
+        test_idx = df[df.te.isin(test_list)].index
         test_samp = [tuple(x) for x in np.array(samples)[test_idx]]
         df = df.drop(test_idx)
     else:
         test_samp = None
-    
-    train_idx, val_idx = list(skf.split(df.filename, df.te))[0]
+        
+    if strat_nogroups:
+        skf = StratifiedKFold(n_splits=5, random_state=hparams["seed"], shuffle=True)
+        train_idx, val_idx = list(skf.split(df.filename, df.te))[k]
+    else:
+        df, samples = shuffle(df, samples, random_state=hparams["seed"])
+        gkf = GroupKFold(n_splits=5)
+        train_idx, val_idx = list(gkf.split(df.filename, groups=df.te))[k]
     
     train_samp = [tuple(x) for x in np.array(samples)[train_idx]]
     val_samp = [tuple(x) for x in np.array(samples)[val_idx]]
@@ -87,7 +97,7 @@ def main(args):
         monitor="val_iou",
         verbose=True,
         mode="max",
-        save_top_k=3,
+        save_top_k=1,
     )
 
     earlystopping_callback = EarlyStopping(

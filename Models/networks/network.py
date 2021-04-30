@@ -8,19 +8,19 @@ from Models.layers.grid_attention_layer import GridAttentionBlock2D, MultiAttent
 from Models.layers.channel_attention_layer import SE_Conv_Block
 from Models.layers.scale_attention_layer import scale_atten_convblock
 from Models.layers.nonlocal_layer import NONLocalBlock2D
+from Models import show_fused_heatmap
 
 
 class Comprehensive_Atten_Unet(nn.Module):
     def __init__(self, in_ch=3, n_classes=1, feature_scale=4, is_deconv=True, is_batchnorm=True,
-                 nonlocal_mode='concatenation', attention_dsample=(1, 1), im_size = (800, 800)):
+                 nonlocal_mode='concatenation', attention_dsample=(1, 1), out_size=(256,256)):
         super(Comprehensive_Atten_Unet, self).__init__()
         self.is_deconv = is_deconv
         self.in_channels = in_ch
         self.num_classes = n_classes
         self.is_batchnorm = is_batchnorm
         self.feature_scale = feature_scale
-        self.im_size = im_size
-
+        self.out_size = out_size
 
         filters = [64, 128, 256, 512, 1024]
         filters = [int(x / self.feature_scale) for x in filters]
@@ -54,15 +54,15 @@ class Comprehensive_Atten_Unet(nn.Module):
         self.up_concat3 = UpCat(filters[3], filters[2], self.is_deconv)
         self.up_concat2 = UpCat(filters[2], filters[1], self.is_deconv)
         self.up_concat1 = UpCat(filters[1], filters[0], self.is_deconv)
-        self.up4 = SE_Conv_Block(filters[4], filters[3], drop_out=True, size=self.im_size[0])
-        self.up3 = SE_Conv_Block(filters[3], filters[2], size=self.im_size[0])
-        self.up2 = SE_Conv_Block(filters[2], filters[1], size=self.im_size[0])
-        self.up1 = SE_Conv_Block(filters[1], filters[0], size=self.im_size[0])
+        self.up4 = SE_Conv_Block(filters[4], filters[3], drop_out=True, out_size=self.out_size)
+        self.up3 = SE_Conv_Block(filters[3], filters[2], out_size=self.out_size)
+        self.up2 = SE_Conv_Block(filters[2], filters[1], out_size=self.out_size)
+        self.up1 = SE_Conv_Block(filters[1], filters[0], out_size=self.out_size)
 
         # deep supervision
-        self.dsv4 = UnetDsv3(in_size=filters[3], out_size=4, scale_factor=self.im_size)
-        self.dsv3 = UnetDsv3(in_size=filters[2], out_size=4, scale_factor=self.im_size)
-        self.dsv2 = UnetDsv3(in_size=filters[1], out_size=4, scale_factor=self.im_size)
+        self.dsv4 = UnetDsv3(in_size=filters[3], out_size=4, scale_factor=self.out_size)
+        self.dsv3 = UnetDsv3(in_size=filters[2], out_size=4, scale_factor=self.out_size)
+        self.dsv2 = UnetDsv3(in_size=filters[1], out_size=4, scale_factor=self.out_size)
         self.dsv1 = nn.Conv2d(in_channels=filters[0], out_channels=4, kernel_size=1)
 
         self.scale_att = scale_atten_convblock(in_size=16, out_size=4)
@@ -86,31 +86,21 @@ class Comprehensive_Atten_Unet(nn.Module):
         # Gating Signal Generation
         center = self.center(maxpool4)
 
-        # Attention Mechanism
-        # Upscaling Part (Decoder)
+        # Attention Mechanism and Upscaling Part
         up4 = self.up_concat4(conv4, center)
         g_conv4 = self.nonlocal4_2(up4)
 
         up4, att_weight4 = self.up4(g_conv4)
-        g_conv3, att3 = self.attentionblock3(conv3, up4)
-
-        atten3_map = att3.cpu().detach().numpy().astype(np.float)
-        atten3_map = ndimage.interpolation.zoom(atten3_map, [1.0, 1.0, 800 / atten3_map.shape[2], 800 / atten3_map.shape[3]], order=0)
+        g_conv3, _ = self.attentionblock3(conv3, up4)
 
         up3 = self.up_concat3(g_conv3, up4)
         up3, att_weight3 = self.up3(up3)
-        g_conv2, att2 = self.attentionblock2(conv2, up3)
-
-        atten2_map = att2.cpu().detach().numpy().astype(np.float)
-        atten2_map = ndimage.interpolation.zoom(atten2_map, [1.0, 1.0, 800 / atten2_map.shape[2], 800 / atten2_map.shape[3]], order=0)
+        g_conv2, _ = self.attentionblock2(conv2, up3)
 
         up2 = self.up_concat2(g_conv2, up3)
         up2, att_weight2 = self.up2(up2)
-        g_conv1, att1 = self.attentionblock1(conv1, up2)
+        g_conv1, _ = self.attentionblock1(conv1, up2)
 
-        atten1_map = att1.cpu().detach().numpy().astype(np.float)
-        atten1_map = ndimage.interpolation.zoom(atten1_map, [1.0, 1.0, 800 / atten1_map.shape[2],
-                                                              800 / atten1_map.shape[3]], order=0)
         up1 = self.up_concat1(conv1, up2)
         up1, att_weight1 = self.up1(up1)
 
@@ -124,11 +114,84 @@ class Comprehensive_Atten_Unet(nn.Module):
         out = self.scale_att(dsv_cat)
 
         out = self.final(out)
-        self.attention_maps = [atten1_map, atten2_map, atten3_map]
 
         return out
     
-    def get_attention(n: int):
-        return self.attention_maps[n-1]
+    def get_attention_map(self, inputs, n=None):
+        attention_maps = None
         
+        #Encoder and center
+        conv1 = self.conv1(inputs)
+        maxpool1 = self.maxpool1(conv1)
+        conv2 = self.conv2(maxpool1)
+        maxpool2 = self.maxpool2(conv2)
+        conv3 = self.conv3(maxpool2)
+        maxpool3 = self.maxpool3(conv3)
+        conv4 = self.conv4(maxpool3)
+        maxpool4 = self.maxpool4(conv4)
+        center = self.center(maxpool4)
         
+        #Decoder
+        up4 = self.up_concat4(conv4, center)
+        g_conv4 = self.nonlocal4_2(up4)
+        up4, att_weight4 = self.up4(g_conv4)
+        
+        #Attention layer 3
+        g_conv3, att3 = self.attentionblock3(conv3, up4)
+        atten3_map = att3.cpu().detach().numpy().astype(np.float)
+        atten3_map = ndimage.interpolation.zoom(atten3_map, [1.0, 1.0, self.out_size[0] / atten3_map.shape[2], self.out_size[1] /                                                           atten3_map.shape[3]], order=0)
+        
+        atten3_map = ((atten3_map[0,0,:,:]+atten3_map[0,1,:,:])/2).reshape(1,self.out_size[0],self.out_size[1])
+
+        if n == 1:
+            attention_maps = atten3_map
+
+        elif n == 2:
+            up3 = self.up_concat3(g_conv3, up4)
+            up3, att_weight3 = self.up3(up3)
+            g_conv2, att2 = self.attentionblock2(conv2, up3)
+            
+            #Attention layer 2
+            atten2_map = att2.cpu().detach().numpy().astype(np.float)
+            atten2_map = ndimage.interpolation.zoom(atten2_map, [1.0, 1.0, self.out_size[0] / atten2_map.shape[2], self.out_size[1] /                                                          atten2_map.shape[3]], order=0)
+            
+            atten2_map = ((atten2_map[0,0,:,:]+atten2_map[0,1,:,:])/2).reshape(1,self.out_size[0],self.out_size[1])
+            
+            attention_maps = atten2_map
+
+        elif n == 3:
+            up3 = self.up_concat3(g_conv3, up4)
+            up3, att_weight3 = self.up3(up3)
+            g_conv2, att2 = self.attentionblock2(conv2, up3)
+            up2 = self.up_concat2(g_conv2, up3)
+            up2, att_weight2 = self.up2(up2)
+            g_conv1, att1 = self.attentionblock1(conv1, up2)
+            
+            #Attention layer 3
+            atten1_map = att1.cpu().detach().numpy().astype(np.float)
+            atten1_map = ndimage.interpolation.zoom(atten1_map, [1.0, 1.0, self.out_size[0] / atten1_map.shape[2], self.out_size[1] /                                                          atten1_map.shape[3]], order=0).reshape(1,self.out_size[0],self.out_size[1])
+
+            attention_maps = atten1_map
+
+        else:
+            up3 = self.up_concat3(g_conv3, up4)
+            up3, att_weight3 = self.up3(up3)
+            g_conv2, att2 = self.attentionblock2(conv2, up3)
+
+            atten2_map = att2.cpu().detach().numpy().astype(np.float)
+            atten2_map = ndimage.interpolation.zoom(atten2_map,
+                                                    [1.0, 1.0, self.out_size[0] / atten2_map.shape[2], self.out_size[1] /                                                                       atten2_map.shape[3]], order=0)
+            
+            atten2_map = ((atten2_map[:, 0, :, :] + atten2_map[:, 1, :, :]) / 2).reshape(1,self.out_size[0],self.out_size[1])
+
+            up2 = self.up_concat2(g_conv2, up3)
+            up2, att_weight2 = self.up2(up2)
+            g_conv1, att1 = self.attentionblock1(conv1, up2)
+
+            atten1_map = att1.cpu().detach().numpy().astype(np.float)
+            atten1_map = ndimage.interpolation.zoom(atten1_map, [1.0, 1.0, self.out_size[0] / atten1_map.shape[2], self.out_size[1] /                                                           atten1_map.shape[3]], order=0).reshape(1,self.out_size[0],self.out_size[1])
+
+            attention_maps = [atten1_map, atten2_map, atten3_map]
+
+        return attention_maps
+    

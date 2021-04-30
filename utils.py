@@ -1,9 +1,20 @@
+import argparse
 from pathlib import Path
 from typing import Union, Dict, List, Tuple
 import cv2
 
 def get_id2_file_paths(path: Union[str, Path]) -> Dict[str, Path]:
     return {x.stem: x for x in Path(path).glob("*.*")}
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def get_samples(image_path: Path, mask_path: Path) -> List[Tuple[Path, Path]]:

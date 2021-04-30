@@ -10,7 +10,7 @@ def conv3x3(in_planes, out_planes, stride=1, bias=False, group=1):
 class SE_Conv_Block(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, drop_out=False, size=(800, 800)):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, drop_out=False, out_size=(256,256)):
         super(SE_Conv_Block, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -22,22 +22,23 @@ class SE_Conv_Block(nn.Module):
         self.downsample = downsample
         self.stride = stride
         self.dropout = drop_out
+        self.out_size = out_size
 
         if planes <= 16:
-            self.globalAvgPool = nn.AvgPool2d((size, size), stride=1)  # (224, 300) for ISIC2018
-            self.globalMaxPool = nn.MaxPool2d((size, size), stride=1)
+            self.globalAvgPool = nn.AvgPool2d((self.out_size[0], self.out_size[1]), stride=1) 
+            self.globalMaxPool = nn.MaxPool2d((self.out_size[0], self.out_size[1]), stride=1)
         elif planes == 32:
-            self.globalAvgPool = nn.AvgPool2d((size//2, size//2), stride=1)  # (112, 150) for ISIC2018
-            self.globalMaxPool = nn.MaxPool2d((size//2, size//2), stride=1)
+            self.globalAvgPool = nn.AvgPool2d((self.out_size[0]//2, self.out_size[1]//2), stride=1)
+            self.globalMaxPool = nn.MaxPool2d((self.out_size[0]//2, self.out_size[1]//2), stride=1)
         elif planes == 64:
-            self.globalAvgPool = nn.AvgPool2d((size//4, size//4), stride=1)    # (56, 75) for ISIC2018
-            self.globalMaxPool = nn.MaxPool2d((size//4, size//4), stride=1)
+            self.globalAvgPool = nn.AvgPool2d((self.out_size[0]//4, self.out_size[1]//4), stride=1)
+            self.globalMaxPool = nn.MaxPool2d((self.out_size[0]//4, self.out_size[1]//4), stride=1)
         elif planes == 128:
-            self.globalAvgPool = nn.AvgPool2d((size//8, size//8), stride=1)    # (28, 37) for ISIC2018
-            self.globalMaxPool = nn.MaxPool2d((size//8, size//8), stride=1)
+            self.globalAvgPool = nn.AvgPool2d((self.out_size[0]//8, self.out_size[1]//8), stride=1)
+            self.globalMaxPool = nn.MaxPool2d((self.out_size[0]//8, self.out_size[1]//8), stride=1)
         elif planes == 256:
-            self.globalAvgPool = nn.AvgPool2d((size//16, size//16), stride=1)    # (14, 18) for ISIC2018
-            self.globalMaxPool = nn.MaxPool2d((size//16, size//16), stride=1)
+            self.globalAvgPool = nn.AvgPool2d((self.out_size[0]//16, self.out_size[1]//16), stride=1)
+            self.globalMaxPool = nn.MaxPool2d((self.out_size[0]//16, self.out_size[1]//16), stride=1)
 
         self.fc1 = nn.Linear(in_features=planes * 2, out_features=round(planes / 2))
         self.fc2 = nn.Linear(in_features=round(planes / 2), out_features=planes * 2)

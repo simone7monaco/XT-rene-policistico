@@ -74,27 +74,29 @@ else:
     
 dataloader = DataLoader(
         dataset,
-        batch_size=1,
+        batch_size=4,
         shuffle=False,
         pin_memory=True,
-        drop_last=True,
+        drop_last=False,
     )
 
 desc = f"Test model exp {exp}" if args.exp else "Test model"
 model.eval()
 with torch.no_grad():
     for data in tqdm(dataloader, desc=desc):
-        name = data["image_id"][0]
         x = data["features"].to(device)
-        
-        result = model(x)[0][0]
-        result = logistic.cdf(result.detach().cpu().numpy())
+        batch_result = model(x)
+        for i in batch_result.shape[0]:
+            name = data["image_id"][i]
 
-        if args.thresh:
-            result = (result > args.thresh).astype(np.uint8)
-            Image.fromarray(result*255).save(res_PATH / f"{name}.png")
-        else:
-            fig, ax = plt.subplots(figsize=(8,8))
-            sns.heatmap(result, ax=ax, xticklabels=False, yticklabels=False, cmap='jet', cbar=False)
-            plt.savefig(res_PATH / f"{name}.png")
+            result = batch_result[i][0]
+            result = logistic.cdf(result.detach().cpu().numpy())
+
+            if args.thresh:
+                result = (result > args.thresh).astype(np.uint8)
+                Image.fromarray(result*255).save(res_PATH / f"{name}.png")
+            else:
+                fig, ax = plt.subplots(figsize=(8,8))
+                sns.heatmap(result, ax=ax, xticklabels=False, yticklabels=False, cmap='jet', cbar=False)
+                plt.savefig(res_PATH / f"{name}.png")
         

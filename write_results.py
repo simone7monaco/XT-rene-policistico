@@ -4,6 +4,7 @@ from queue import deque
 from time import time
 
 import json
+import pickle
 import random
 import math
 import numpy as np
@@ -48,9 +49,11 @@ remove_objects = RemoveSmallObjects(min_size=5000)
 
 
 ROOT = Path('DATASET')
-real_mask_PATH = ROOT / 'masks/all_oldnames'
-real_annot_PATH = ROOT / 'annotations_original/all_oldnames'
-real_img_PATH = ROOT / 'images_original/all_oldnames/'
+real_mask_PATH = ROOT / 'masks/full_dataset'
+real_annot_PATH = ROOT / 'annotations_original/full_dataset'
+real_img_PATH = ROOT / 'images_original/full_dataset/'
+# real_annot_PATH = ROOT / 'annotations_original/all_oldnames'
+# real_img_PATH = ROOT / 'images_original/all_oldnames/'
 
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val stratified from the others')
@@ -83,7 +86,7 @@ def center(c):
     if M["m00"] == 0: print(c)
     cX = int(M["m10"] / M["m00"])
     cY = int(M["m01"] / M["m00"])
-    return np.array([cX, cY])
+    return [cX, cY]
 
 # def counter_withmemory(stack, min_dist=30):
 #     name = next(iter(stack[0].keys()))
@@ -338,12 +341,12 @@ def mcc(TP, TN, FP, FN, N=None):
 
 def missed_wrong_cysts_dict(gt, pred):
     cysts = {}
-
-    gt_contours, _ = cv2.findContours(gt.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    pred_contours, _ = cv2.findContours(pred.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    gt_contours = np.array([c for c in gt_contours if c.size > 2])
-    pred_contours = np.array([c for c in pred_contours if c.size > 2])
+    gt_contours, _ = cv2.findContours(gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    pred_contours, _ = cv2.findContours(pred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    gt_contours = np.array([c for c in gt_contours if c.size > 4])
+    pred_contours = np.array([c for c in pred_contours if c.size > 4 and cv2.contourArea(c)>5])
     
     gt_seps = np.array([csr_matrix(cv2.fillPoly(np.zeros_like(gt), pts=[c], color=(1))) for c in gt_contours], dtype=object)
     
@@ -351,7 +354,7 @@ def missed_wrong_cysts_dict(gt, pred):
 
     detect_miss_list = np.array([False for _ in pred_seps])
 
-    count = range(len(gt_contours) + len(pred_contours))
+    count = (i for i in range(len(gt_contours) + len(pred_contours)))
     
 
     for single_gt, c in zip(gt_seps, gt_contours):
@@ -361,8 +364,11 @@ def missed_wrong_cysts_dict(gt, pred):
             best_p = np.argmax([cv2.contourArea(cp) for cp in pred_contours[curr_detection]])
             areas = (cv2.contourArea(c), cv2.contourArea(pred_contours[curr_detection][best_p]))
             centers = (center(c), center(pred_contours[curr_detection][best_p]))
-
             cysts[next(count)] = {'state': 'detected', 'areas': areas, 'centers': centers}
+            for c_p in np.hstack((pred_contours[curr_detection][:best_p], pred_contours[curr_detection][best_p+1:])):
+                areas = (cv2.contourArea(c), cv2.contourArea(c_p))
+                centers = (center(c), center(pred_contours[curr_detection][best_p]))
+                cysts[next(count)] = {'state': 'overcounted', 'areas': areas, 'centers': centers}
 
         else:
             areas = (cv2.contourArea(c), None)
@@ -376,15 +382,13 @@ def missed_wrong_cysts_dict(gt, pred):
             centers = (None, center(c))
             cysts[next(count)] = {'state': 'wrong', 'areas': areas, 'centers': centers}
 
-            
-    
-    return cysts
+    return cysts, len(gt_contours), len(pred_contours)
 
 
 def write_results(folder, is_jpg=False):
     np.seterr('raise')
     ROOT = Path('.')
-    datafile = ROOT / folder / "summary_old.json"
+    datafile = ROOT / folder / "summary_final.json"
     res_model_PATH = ROOT / folder
     IM_dict = {}
     
@@ -393,20 +397,18 @@ def write_results(folder, is_jpg=False):
     suffix = '*.jpg' if is_jpg else '*.png'
     
     paths = sorted(res_model_PATH.glob(suffix))
+    
+#     paths = random.sample(paths, 30)
     for i, pred in enumerate(tqdm(paths, desc=folder.parent.stem)):
-#         if max_iter and i > max_iter : break
         name = pred.stem
-        
         s = {} # dict of cysts as {'state': state, 'areas': [AREA_real, AREA_pred], 'centers': [(x_r, y_r), (x_p, y_p)]}
-#         s.name = get_old_name(name)
-        s.name = name
-            
+#         s.name = get_old_name(name)            
             
         assert (real_mask_PATH / f'{name}.png').exists(), real_mask_PATH / f'{name}.png'
         gt = open_mask(real_mask_PATH / f'{name}.png')
         pred_img = open_mask(pred)
         
-        s['cysts'] = missed_wrong_cysts_dict(gt, pred_img)
+        s['cysts'], s['total_real'], s['total_pred'] = missed_wrong_cysts_dict(gt, pred_img)
         
         s['tube_area'] = tube_area(name)
             
@@ -431,6 +433,7 @@ def write_results(folder, is_jpg=False):
 
         IM_dict[name] = s
         
+#     pickle.dump(IM_dict, open(datafile, 'wb'))
     json.dump(IM_dict, open(datafile, 'w'))
     print(f'Results saved in "{datafile}"')
     return
@@ -442,5 +445,5 @@ if __name__ == '__main__':
     res_model_PATH = Path(args.inpath)
     
     t0 = time()
-    write_results(res_model_PATH)
+    write_results(res_model_PATH, is_jpg=True)
     print(f"\n__________________ Finished in {time()-t0} s __________________")

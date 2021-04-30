@@ -5,7 +5,7 @@ from zipfile import ZipFile
 import yaml
 import ast
 
-from utils import object_from_dict
+from utils import object_from_dict, str2bool
 from experiment import SegmentCyst
 from sweep_params import get_sweep
 from crossval_perexp import split_dataset
@@ -23,22 +23,23 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
-    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset from wandb Artifact (v1, v2...), default is 'latest'.", default='latest')
+    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the conf file. Default is 'latest'.", default='latest')
+    
     parser.add_argument("--batch_size", type=int, default=None, help="Batch size for sweep.")
     parser.add_argument("--lr", type=float, default=None, help="Lr for sweep.")
     parser.add_argument("--model", type=str, default=None, help="Model type for sweep.")
     parser.add_argument("--optimizer", type=str, default=None, help="Optimizer for sweep.")
     parser.add_argument("--scheduler", type=str, default=None, help="Scheduler for sweep.")
-    
 #     parser.add_argument("--transf_imsize", type=int, default=None, help="Rescale images for sweep.")
     parser.add_argument("--transf_onlycysts", type=int, default=None, help="RandomCrop if false, CropNonEmptyMaskIfExists if true for sweep.")
     parser.add_argument("--transf_crop", type=int, default=None, help="Portion of the image of size 1024/n")
     parser.add_argument("--transf_enhancement", type=int, default=None, help="Add enhancement on images for sweep.")
     
-    parser.add_argument('-a1', '--active_attention_layer1', type=bool, help="Activate Attention layer 1", default=False)
-    parser.add_argument('-a2', '--active_attention_layer2', type=bool, help="Activate Attention layer 2", default=False)
-    parser.add_argument('-a3', '--active_attention_layer3', type=bool, help="Activate Attention layer 3", default=False)
-    parser.add_argument('-a4', '--active_attention_layer4', type=bool, help="Activate Attention layer 4", default=False)
+    parser.add_argument('-a', '--active_attention_layers', help="List of Active Attention layer (between 1~4). Write [1,3] to set AAL on blocks 1 and 3.", default=None)
+    parser.add_argument('-a1', '--active_attention_layer1', type=str2bool, help="Activate Attention layer 1", nargs='?', const=True, default=False)
+    parser.add_argument('-a2', '--active_attention_layer2', type=str2bool, help="Activate Attention layer 2", nargs='?', const=True, default=False)
+    parser.add_argument('-a3', '--active_attention_layer3', type=str2bool, help="Activate Attention layer 3", nargs='?', const=True, default=False)
+    parser.add_argument('-a4', '--active_attention_layer4', type=str2bool, help="Activate Attention layer 4", nargs='?', const=True, default=False)
 #     --batch_size=8 --lr=0.005 --model=unet --optimizer=adamp --scheduler=cosannealing
     
     return parser.parse_args()
@@ -54,30 +55,41 @@ hparams = get_sweep(hparams, args)
 wandb.login()
 run = wandb.init(project="ca-net", entity="rene-policistico", config=hparams, settings=wandb.Settings(start_method='fork'))
 
-dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
-data_dir = dataset.download()
+if str(args.dataset) != 'nw':
+    dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
+    data_dir = dataset.download()
 
-if not (Path(data_dir) / "images").exists():
-    zippath = next(Path(data_dir).iterdir())
-    with ZipFile(zippath, 'r') as zip_ref:
-        zip_ref.extractall(data_dir)
+    if not (Path(data_dir) / "images").exists():
+        zippath = next(Path(data_dir).iterdir())
+        with ZipFile(zippath, 'r') as zip_ref:
+            zip_ref.extractall(data_dir)
 
-hparams["image_path"] = Path(data_dir) / "images"
-hparams["mask_path"] = Path(data_dir) / "masks"
-
+    hparams["image_path"] = Path(data_dir) / "images"
+    hparams["mask_path"] = Path(data_dir) / "masks"
+else:
+    hparams["image_path"] = Path(hparams["image_path"])
+    hparams["mask_path"] = Path(hparams["mask_path"])
+    
 splits = split_dataset(hparams)
 model = SegmentCyst(hparams, splits[:-1])
 
-if "activate_attention_layers" in model.model.__dict__:
-    active_attention_layers = [
+
+if "activate_attention_layers" in dir(model.model):
+    if args.active_attention_layers:
+        active_attention_layers = ast.literal_eval(args.active_attention_layers)
+    else:
+        active_attention_layers = [
             i+1 for i, act in enumerate([
-                args.active_attention_layer1, 
-                args.active_attention_layer2, 
-                args.active_attention_layer3, 
+                args.active_attention_layer1,
+                args.active_attention_layer2,
+                args.active_attention_layer3,
                 args.active_attention_layer4
-        ]) if act]
+            ]) if act]
+    
     print(f"> Activating attention layers {active_attention_layers}")
     model.model.activate_attention_layers(active_attention_layers)
+else:
+    print('ERROR!!')
 
 hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
 hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
