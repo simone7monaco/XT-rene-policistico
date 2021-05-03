@@ -25,18 +25,18 @@ train_parameters:
 
 checkpoint_callback:
   type: pytorch_lightning.callbacks.ModelCheckpoint
-  filepath: "./cyst_checkpoints/prova1"
+  filepath: "./cyst_checkpoints/BIG_crossval"
   monitor: val_iou
   verbose: True
   mode: max
-  save_top_k: -1
+  save_top_k: 1
 
 val_parameters:
   batch_size: 2
 
 optimizer:
   type: adamp.AdamP
-  lr: 0.001
+  lr: 0.0001
 
 
 train_aug:
@@ -48,14 +48,14 @@ train_aug:
     transforms:
       - __class_fullname__: albumentations.augmentations.transforms.LongestMaxSize
         always_apply: False
-        max_size: 512
+        max_size: 800
         p: 1
       - __class_fullname__: albumentations.augmentations.transforms.PadIfNeeded
         always_apply: false
         border_mode: 0
         mask_value: 0
-        min_height: 512
-        min_width: 512
+        min_height: 800
+        min_width: 800
         p: 1
         value: 0
 #       - __class_fullname__: albumentations.augmentations.transforms.RandomCrop
@@ -63,27 +63,27 @@ train_aug:
 #         height: 512
 #         width: 512
 #         p: 1
-      - __class_fullname__: albumentations.augmentations.transforms.CropNonEmptyMaskIfExists
-        always_apply: false
-        height: 512
-        ignore_channels:
-          - 1
-        p: 1
-        width: 512
+#       - __class_fullname__: albumentations.augmentations.transforms.CropNonEmptyMaskIfExists
+#         always_apply: false
+#         height: 512
+#         ignore_channels:
+#           - 1
+#         p: 1
+#         width: 512
       - __class_fullname__: albumentations.augmentations.transforms.HorizontalFlip
         always_apply: False
         p: 0.5
       - __class_fullname__: albumentations.augmentations.transforms.RandomRotate90
         always_apply: False
         p: 0.5
-      - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
-        p: 1.0
-      - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
-        always_apply: false
-        p: 0.5
-      - __class_fullname__: albumentations.augmentations.transforms.CLAHE
-        always_apply: false
-        p: 0.5
+#       - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
+#         p: 1.0
+#       - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
+#         always_apply: false
+#         p: 0.5
+#       - __class_fullname__: albumentations.augmentations.transforms.CLAHE
+#         always_apply: false
+#         p: 0.5
       - __class_fullname__: albumentations.augmentations.transforms.Normalize
         always_apply: false
         max_pixel_value: 255.0
@@ -106,24 +106,24 @@ val_aug:
     transforms:
       - __class_fullname__: albumentations.augmentations.transforms.LongestMaxSize
         always_apply: False
-        max_size: 512
+        max_size: 800
         p: 1
       - __class_fullname__: albumentations.augmentations.transforms.PadIfNeeded
         always_apply: false
         border_mode: 0
         mask_value: 0
-        min_height: 512
-        min_width: 512
+        min_height: 800
+        min_width: 800
         p: 1
         value: 0
-      - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
-        p: 1.0
-      - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
-        always_apply: false
-        p: 0.5
-      - __class_fullname__: albumentations.augmentations.transforms.CLAHE
-        always_apply: false
-        p: 0.5
+#       - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
+#         p: 1.0
+#       - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
+#         always_apply: false
+#         p: 0.5
+#       - __class_fullname__: albumentations.augmentations.transforms.CLAHE
+#         always_apply: false
+#         p: 0.5
       - __class_fullname__: albumentations.augmentations.transforms.Normalize
         always_apply: false
         max_pixel_value: 255.0
@@ -146,7 +146,7 @@ test_aug:
     transforms:
       - __class_fullname__: albumentations.augmentations.transforms.LongestMaxSize
         always_apply: False
-        max_size: 512
+        max_size: 800
         p: 1
       - __class_fullname__: albumentations.augmentations.transforms.Normalize
         always_apply: false

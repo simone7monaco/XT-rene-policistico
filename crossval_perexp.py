@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import ast
 import torch
 from sklearn.utils import shuffle
 from sklearn.model_selection import StratifiedKFold, GroupKFold
@@ -20,11 +21,14 @@ from simplify_names import unpack_name
 import wandb
 
 def get_args():
-    parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val stratified from the others')
+    parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
+    parser.add_argument("-t", "--test_list", default=None, help="list of <treat_exp> to put in test set, ")
+    parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels.")
+    
     parser.add_argument("-k", "--kth_fold", type=int, help="Number of the fold to consider between 0 and 4.", required=True)
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
-    parser.add_argument("-s", "--stratify_fold", nargs='?', default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
+    parser.add_argument("--stratify_fold", nargs='?', default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
     
     
     return parser.parse_args()
@@ -76,24 +80,35 @@ def main(args):
         
     with open(args.config_path) as f:
         hparams = yaml.load(f, Loader=yaml.SafeLoader)
+    if args.seed: hparams["seed"] = args.seed
     
-    exp = hparams["test_experiment"]
-    name = f"crossval_exp{exp}"
+#     name = f"crossval_exp{exp}"
+    name = None
     wandb.login()
 
     run = wandb.init(project="upp", entity="smonaco", name=name)
 
     dataset = run.use_artifact('rene-policistico/upp/dataset:latest', type='dataset')
     data_dir = dataset.download()
-
-    hparams["image_path"] = Path(data_dir) / "images"
-    hparams["mask_path"] = Path(data_dir) / "masks"
     
-    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / name
+    if 's' in str(args.focus_size):
+        msk = 'masks_small'
+        print("Dataset labels have only SMALL cysts.\n")
+    if 'b' in str(args.focus_size):
+        msk = 'masks_big'
+        print("Dataset labels have only BIG cysts.\n")
+    else:
+        mks = 'masks'
+        
+    hparams["image_path"] = Path(data_dir) / "images"
+    hparams["mask_path"] = Path(data_dir) / msk
+    
+    
+    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
     hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
     checkpoint_callback = ModelCheckpoint(
-        filepath=hparams["checkpoint_callback"]["filepath"],
+        dirpath=hparams["checkpoint_callback"]["filepath"],
         monitor="val_iou",
         verbose=True,
         mode="max",
@@ -108,7 +123,7 @@ def main(args):
         mode='max',
     )
     
-    splits = split_dataset(hparams, exp)
+    splits = split_dataset(hparams, k=args.kth_fold, test_list=args.test_list, strat_nogroups=args.stratify_fold)
     
     if splits[-1] is not None:
         with (hparams["checkpoint_callback"]["filepath"] / "test_samples.pickle").open('wb') as file:
