@@ -11,6 +11,7 @@ from sweep_params import get_sweep
 from crossval_perexp import split_dataset
 from Models.attention_unet import AttentionUnet
 
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -23,9 +24,9 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
-    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the conf file. Default is 'latest'.", default='latest')
+    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the config file. Default is 'latest'.", default='latest')
     
-    parser.add_argument("--batch_size", type=int, default=None, help="Batch size for sweep.")
+    parser.add_argument("-b", "--batch_size", type=int, default=None, help="Batch size for sweep.")
     parser.add_argument("--lr", type=float, default=None, help="Lr for sweep.")
     parser.add_argument("--model", type=str, default=None, help="Model type for sweep.")
     parser.add_argument("--optimizer", type=str, default=None, help="Optimizer for sweep.")
@@ -50,14 +51,19 @@ args = get_args()
 with open(args.config_path) as f:
     hparams = yaml.load(f, Loader=yaml.SafeLoader)
 
+if torch.cuda.device_count() > 1:
+    hparams["num_workers"] = 4
+    print('HI LEGION!')
+
 hparams = get_sweep(hparams, args)
 
 wandb.login()
 run = wandb.init(project="ca-net", entity="rene-policistico", config=hparams, settings=wandb.Settings(start_method='fork'))
 
 if str(args.dataset) != 'nw':
-    dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
-    data_dir = dataset.download()
+#     dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
+#     data_dir = dataset.download()
+    data_dir = f"artifacts/dataset:{args.dataset}"
 
     if not (Path(data_dir) / "images").exists():
         zippath = next(Path(data_dir).iterdir())
@@ -88,10 +94,9 @@ if "activate_attention_layers" in dir(model.model):
     
     print(f"> Activating attention layers {active_attention_layers}")
     model.model.activate_attention_layers(active_attention_layers)
-else:
-    print('ERROR!!')
 
-hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
+# hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
+hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / 'tmp'
 hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
 checkpoint_callback = ModelCheckpoint(

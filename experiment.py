@@ -189,8 +189,6 @@ class SegmentCyst(pl.LightningModule):
         logits = self.forward(features)
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
         
-        print('>>>>')
-        print(masks.shape, logits.shape)
         result = {}
 
         if self.bce:

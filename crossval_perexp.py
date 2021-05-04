@@ -77,7 +77,7 @@ def split_dataset(hparams, k=0, test_list=None, strat_nogroups=False):
 def main(args):
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
     os.environ["WANDB_START_METHOD"] = "fork"
-        
+    
     with open(args.config_path) as f:
         hparams = yaml.load(f, Loader=yaml.SafeLoader)
     if args.seed: hparams["seed"] = args.seed
@@ -91,6 +91,12 @@ def main(args):
     dataset = run.use_artifact('rene-policistico/upp/dataset:latest', type='dataset')
     data_dir = dataset.download()
     
+    print("---------------------------------------")
+    print("        Running Crossvalidation        ")
+    print(f"          seed: {args.seed}           ")
+    print(f"          fold: {args.kth_fold}       ")
+    print("---------------------------------------\n")
+    
     if 's' in str(args.focus_size):
         msk = 'masks_small'
         print("Dataset labels have only SMALL cysts.\n")
@@ -98,7 +104,7 @@ def main(args):
         msk = 'masks_big'
         print("Dataset labels have only BIG cysts.\n")
     else:
-        mks = 'masks'
+        msk = 'masks'
         
     hparams["image_path"] = Path(data_dir) / "images"
     hparams["mask_path"] = Path(data_dir) / msk
@@ -123,7 +129,8 @@ def main(args):
         mode='max',
     )
     
-    splits = split_dataset(hparams, k=args.kth_fold, test_list=args.test_list, strat_nogroups=args.stratify_fold)
+    test_list = ast.literal_eval(args.test_list) if args.test_list else None
+    splits = split_dataset(hparams, k=args.kth_fold, test_list=test_list, strat_nogroups=args.stratify_fold)
     
     if splits[-1] is not None:
         with (hparams["checkpoint_callback"]["filepath"] / "test_samples.pickle").open('wb') as file:
