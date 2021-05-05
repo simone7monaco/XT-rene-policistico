@@ -53,6 +53,7 @@ with open(args.config_path) as f:
 
 if torch.cuda.device_count() > 1:
     hparams["num_workers"] = 4
+    hparams["train_parameters"]["batch_size"] = 16
     print('HI LEGION!')
 
 hparams = get_sweep(hparams, args)

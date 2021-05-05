@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument("-t", "--test_list", default=None, help="list of <treat_exp> to put in test set, ")
     parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels.")
     
-    parser.add_argument("-k", "--kth_fold", type=int, help="Number of the fold to consider between 0 and 4.", required=True)
+    parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
     parser.add_argument("--stratify_fold", nargs='?', default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
     
@@ -81,7 +81,12 @@ def main(args):
     with open(args.config_path) as f:
         hparams = yaml.load(f, Loader=yaml.SafeLoader)
     if args.seed: hparams["seed"] = args.seed
-    
+
+    if torch.cuda.device_count() > 1:
+        hparams["num_workers"] = 4
+        hparams["train_parameters"]["batch_size"] = 16
+        print('HI LEGION!')
+
 #     name = f"crossval_exp{exp}"
     name = None
     wandb.login()
