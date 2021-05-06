@@ -25,6 +25,7 @@ def get_args():
     parser = argparse.ArgumentParser(description=f'Test network for selected experiment or for teh full dataset.')
     parser.add_argument('exp', nargs='*', type=int, default=None, help="Exp between 1~4")
     parser.add_argument('-i', '--inpath', type=str, default=None, help="Path in which to find the model weights. Alternative to 'exp'.")
+    parser.add_argument('-s', '--split', type=str, default=None, help="File defining train/val split.")
     parser.add_argument('-t', '--thresh', type=float, default=.5, help="threshold for discretization (None for heatmaps of the predictions). Default is 0.5.")
     parser.add_argument('-o', '--outpath', type=str, default='result', help="Name of the result folder. Default is 'result'.")
     args = parser.parse_args()

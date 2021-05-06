@@ -139,6 +139,17 @@ dataset/
 drive_directory/
 artifacts/
 wandb/
+cyst_checkpoints/
+.old/
+Process_images.ipynb
+Tiling.py
+core
+curves/
+cv_perexp/
+cyst_histogram.ipynb
+pred_tiling.py
+section_position.json
+sections/
 DATASET/
 CROSSVALIDATION/
 send_custom

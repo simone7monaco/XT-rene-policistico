@@ -137,9 +137,8 @@ def main(args):
     test_list = ast.literal_eval(args.test_list) if args.test_list else None
     splits = split_dataset(hparams, k=args.kth_fold, test_list=test_list, strat_nogroups=args.stratify_fold)
     
-    if splits[-1] is not None:
-        with (hparams["checkpoint_callback"]["filepath"] / "test_samples.pickle").open('wb') as file:
-            pickle.dump(splits[-1], file)
+    with (hparams["checkpoint_callback"]["filepath"] / "split_samples.pickle").open('wb') as file:
+        pickle.dump(splits, file)
         
     model = SegmentCyst(hparams, splits[:-1])
 
