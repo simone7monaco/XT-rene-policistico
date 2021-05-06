@@ -41,7 +41,7 @@ else:
 res_PATH = in_PATH / args.outpath
 res_PATH.mkdir(exist_ok=True, parents=True)
 
-device = torch.device("cuda", 0)
+device = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
 model = torch.load(next(in_PATH.glob("*.ckpt")))['hyper_parameters']['model']
 
 # {
@@ -62,7 +62,13 @@ state_dict = state_dict_from_disk(
 
 model.load_state_dict(state_dict)
 
-transform = albu.augmentations.transforms.Normalize()
+# transform = albu.augmentations.transforms.Normalize()
+transform = albu.augmentations.transforms.Normalize(
+    always_apply=False, max_pixel_value=255.0,
+    mean=[0.485,0.456,0.406], p=1,std=[0.229,0.224,0.225]
+)
+        
+
 
 if args.exp:
     with Path(f"cv_perexp/exp{exp}/test_samples_oldnames.pickle").open("rb") as file:
@@ -80,17 +86,17 @@ dataloader = DataLoader(
         drop_last=False,
     )
 
-desc = f"Test model exp {exp}" if args.exp else "Test model"
+desc = f" Test model exp {exp}" if args.exp else " Test model"
 model.eval()
 with torch.no_grad():
     for data in tqdm(dataloader, desc=desc):
         x = data["features"].to(device)
         batch_result = model(x)
-        for i in batch_result.shape[0]:
+        for i in range(batch_result.shape[0]):
             name = data["image_id"][i]
 
             result = batch_result[i][0]
-            result = logistic.cdf(result.detach().cpu().numpy())
+            result = logistic.cdf(result.cpu().numpy())
 
             if args.thresh:
                 result = (result > args.thresh).astype(np.uint8)

@@ -88,7 +88,7 @@ def main(args):
         print('HI LEGION!')
 
 #     name = f"crossval_exp{exp}"
-    name = None
+    name = f"fold_{args.kth_fold}_seed_{args.seed}"
     wandb.login()
 
     run = wandb.init(project="upp", entity="smonaco", name=name)
@@ -115,7 +115,7 @@ def main(args):
     hparams["mask_path"] = Path(data_dir) / msk
     
     
-    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
+    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / "small" / wandb.run.name
     hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
     checkpoint_callback = ModelCheckpoint(
