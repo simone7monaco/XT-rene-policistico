@@ -24,8 +24,8 @@ from utils import (
 def get_args():
     parser = argparse.ArgumentParser(description=f'Test network for selected experiment or for teh full dataset.')
     parser.add_argument('exp', nargs='*', type=int, default=None, help="Exp between 1~4")
-    parser.add_argument('-i', '--inpath', type=str, default=None, help="Path in which to find the model weights. Alternative to 'exp'.")
-    parser.add_argument('-s', '--split', type=str, default=None, help="File defining train/val split.")
+    parser.add_argument('-i', '--inpath', type=Path, default=None, help="Path in which to find the model weights. Alternative to 'exp'.")
+    parser.add_argument('--valid', nargs='?', default=False, const=True, help="If used, saples as taken from file 'samples_*' inside INPATH (only validation)")
     parser.add_argument('-t', '--thresh', type=float, default=.5, help="threshold for discretization (None for heatmaps of the predictions). Default is 0.5.")
     parser.add_argument('-o', '--outpath', type=str, default='result', help="Name of the result folder. Default is 'result'.")
     args = parser.parse_args()
@@ -37,7 +37,7 @@ if args.exp:
     exp = args.exp[-1]
     in_PATH = Path(f"cv_perexp/exp{exp}")
 else:
-    in_PATH = Path(args.inpath)
+    in_PATH = args.inpath
 
 res_PATH = in_PATH / args.outpath
 res_PATH.mkdir(exist_ok=True, parents=True)
@@ -72,12 +72,19 @@ transform = albu.augmentations.transforms.Normalize(
 
 
 if args.exp:
+    res_PATH = res_PATH / "test"
+    res_PATH.mkdir(exist_ok=True, parents=True)
     with Path(f"cv_perexp/exp{exp}/test_samples_oldnames.pickle").open("rb") as file:
-        test_samples = pickle.load(file)
-    dataset = SegmentationDataset(test_samples, transform, length=None)
+        samples = pickle.load(file)
+if args.valid:
+    res_PATH = res_PATH / "valid"
+    res_PATH.mkdir(exist_ok=True, parents=True)
+    with open(in_PATH / 'split_samples.pickle', 'rb') as file:
+        samples = pickle.load(file)['valid']
 else:
-    samples = get_samples('artifacts/dataset:v4/images', 'artifacts/dataset:v4/masks')
-    dataset = SegmentationDataset(samples, transform, length=None)
+    samples = get_samples('artifacts/dataset:v6/images', 'artifacts/dataset:v6/masks')
+
+dataset = SegmentationDataset(samples, transform, length=None)
     
 dataloader = DataLoader(
         dataset,
@@ -87,23 +94,28 @@ dataloader = DataLoader(
         drop_last=False,
     )
 
-desc = f" Test model exp {exp}" if args.exp else " Test model"
-model.eval()
-with torch.no_grad():
-    for data in tqdm(dataloader, desc=desc):
-        x = data["features"].to(device)
-        batch_result = model(x)
-        for i in range(batch_result.shape[0]):
-            name = data["image_id"][i]
+try:
+    assert not any(res_PATH.iterdir())
 
-            result = batch_result[i][0]
-            result = logistic.cdf(result.cpu().numpy())
+    desc = f" Test model exp {exp}" if args.exp else f" Test model ({args.inpath})"
+    model.eval()
+    with torch.no_grad():
+        for data in tqdm(dataloader, desc=desc):
+            x = data["features"].to(device)
+            batch_result = model(x)
+            for i in range(batch_result.shape[0]):
+                name = data["image_id"][i]
 
-            if args.thresh:
-                result = (result > args.thresh).astype(np.uint8)
-                Image.fromarray(result*255).save(res_PATH / f"{name}.png")
-            else:
-                fig, ax = plt.subplots(figsize=(8,8))
-                sns.heatmap(result, ax=ax, xticklabels=False, yticklabels=False, cmap='jet', cbar=False)
-                plt.savefig(res_PATH / f"{name}.png")
-        
+                result = batch_result[i][0]
+                result = logistic.cdf(result.cpu().numpy())
+
+                if args.thresh:
+                    result = (result > args.thresh).astype(np.uint8)
+                    Image.fromarray(result*255).save(res_PATH / f"{name}.png")
+                else:
+                    fig, ax = plt.subplots(figsize=(8,8))
+                    sns.heatmap(result, ax=ax, xticklabels=False, yticklabels=False, cmap='jet', cbar=False)
+                    plt.savefig(res_PATH / f"{name}.png")
+
+except:
+    print(f" Test for {args.inpath} already done")

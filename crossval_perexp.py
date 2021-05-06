@@ -72,7 +72,11 @@ def split_dataset(hparams, k=0, test_list=None, strat_nogroups=False):
     train_samp = [tuple(x) for x in np.array(samples)[train_idx]]
     val_samp = [tuple(x) for x in np.array(samples)[val_idx]]
     
-    return train_samp, val_samp, test_samp
+    return {
+        "train": train_samp,
+        "valid": val_samp,
+        "test": test_samp
+    }
 
 def main(args):
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
