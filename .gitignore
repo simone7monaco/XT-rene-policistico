@@ -137,4 +137,12 @@ annotations/
 masks/
 dataset/
 drive_directory/
-logs/
+artifacts/
+wandb/
+DATASET/
+CROSSVALIDATION/
+send_custom
+*out
+*img
+*.zip
+*.sbatch
