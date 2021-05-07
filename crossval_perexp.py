@@ -23,7 +23,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
-    parser.add_argument("-t", "--test_list", default=None, help="list of <treat_exp> to put in test set, ")
+    parser.add_argument("-e", "--exp_tested", default=None, type=str, help="Experiment to put in test set, ")
     parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels.")
     
     parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
@@ -40,7 +40,7 @@ def date_to_exp(date):
     return date_exps[date]
 
 
-def split_dataset(hparams, k=0, test_list=None, strat_nogroups=False):
+def split_dataset(hparams, k=0, test_exp=None, strat_nogroups=False):
     samples = get_samples(hparams["image_path"], hparams["mask_path"])
     
     names = [file[0].stem for file in samples]
@@ -54,8 +54,9 @@ def split_dataset(hparams, k=0, test_list=None, strat_nogroups=False):
     df["te"] = df.treatment + '_' + df.exp.astype(str)
     df.te = df.te.astype('category')
     
-    if test_list is not None:
-        test_idx = df[df.te.isin(test_list)].index
+    if test_exp is not None:
+#         test_idx = df[df.te.isin(test_list)].index
+        test_idx = df[df.exp == int(test_exp)].index  
         test_samp = [tuple(x) for x in np.array(samples)[test_idx]]
         df = df.drop(test_idx)
     else:
@@ -102,24 +103,32 @@ def main(args):
     
     print("---------------------------------------")
     print("        Running Crossvalidation        ")
+    if args.exp_tested:
+        print(f"          exp: {args.exp_tested}  ")
     print(f"          seed: {args.seed}           ")
     print(f"          fold: {args.kth_fold}       ")
     print("---------------------------------------\n")
     
     if 's' in str(args.focus_size):
         msk = 'masks_small'
+        subs = 'Small'
         print("Dataset labels have only SMALL cysts.\n")
-    if 'b' in str(args.focus_size):
+    elif 'b' in str(args.focus_size):
         msk = 'masks_big'
+        subs = 'BiG'
         print("Dataset labels have only BIG cysts.\n")
     else:
         msk = 'masks'
+        subs = 'ALL'
         
     hparams["image_path"] = Path(data_dir) / "images"
     hparams["mask_path"] = Path(data_dir) / msk
     
+    if args.exp_tested:
+        hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"
     
-    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / "small" / wandb.run.name
+    
+    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / subs / wandb.run.name
     hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
     checkpoint_callback = ModelCheckpoint(
@@ -138,12 +147,13 @@ def main(args):
         mode='max',
     )
     
-    test_list = ast.literal_eval(args.test_list) if args.test_list else None
-    splits = split_dataset(hparams, k=args.kth_fold, test_list=test_list, strat_nogroups=args.stratify_fold)
+#     test_list = ast.literal_eval(args.test_list) if args.test_list else None
+    splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp_tested, strat_nogroups=args.stratify_fold)
     
     with (hparams["checkpoint_callback"]["filepath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
-        
+    print(f'Saving in {hparams["checkpoint_callback"]["filepath"]}')
+    stop
     model = SegmentCyst(hparams, splits[:-1])
 
     logger = WandbLogger(name=name)

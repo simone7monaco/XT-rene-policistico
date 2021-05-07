@@ -48,10 +48,10 @@ remove_holes = RemoveSmallHoles(area_threshold=10000)
 remove_objects = RemoveSmallObjects(min_size=5000)
 
 
-ROOT = Path('DATASET')
-real_mask_PATH = ROOT / 'masks/full_dataset'
+ROOT = Path('.')
+real_mask_PATH = ROOT / 'artifacts/dataset:v6/masks'
 real_annot_PATH = ROOT / 'annotations_original/full_dataset'
-real_img_PATH = ROOT / 'images_original/full_dataset/'
+real_img_PATH = ROOT / 'artifacts/dataset:v6/images'
 # real_annot_PATH = ROOT / 'annotations_original/all_oldnames'
 # real_img_PATH = ROOT / 'images_original/all_oldnames/'
 
@@ -394,12 +394,11 @@ def write_results(folder, is_jpg=False):
     
 #     stack = deque([{}, {}])
     
-    suffix = '*.jpg' if is_jpg else '*.png'
+#     suffix = '*.jpg' if is_jpg else '*.png'
     
-    paths = sorted(res_model_PATH.glob(suffix))
-    
+    paths = sorted(res_model_PATH.glob('*.png'))
 #     paths = random.sample(paths, 30)
-    for i, pred in enumerate(tqdm(paths, desc=folder.parent.stem)):
+    for i, pred in enumerate(tqdm(paths, desc=str(folder))):
         name = pred.stem
         s = {} # dict of cysts as {'state': state, 'areas': [AREA_real, AREA_pred], 'centers': [(x_r, y_r), (x_p, y_p)]}
 #         s.name = get_old_name(name)            
