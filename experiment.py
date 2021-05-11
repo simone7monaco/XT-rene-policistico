@@ -51,8 +51,8 @@ class SegmentCyst(pl.LightningModule):
             ("jaccard", 0.1, JaccardLoss(mode="binary", from_logits=True)),
             ("f1", 0.9, BinarySoftF1Loss()),
         ]
-        self.train_samples=splits[0]
-        self.val_samples=splits[1]
+        self.train_samples=splits['train']
+        self.val_samples=splits['valid']
         self.max_val_iou = 0
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:  # type: ignore

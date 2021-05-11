@@ -57,7 +57,8 @@ def split_dataset(hparams, k=0, test_exp=None, strat_nogroups=False):
     if test_exp is not None:
 #         test_idx = df[df.te.isin(test_list)].index
         test_idx = df[df.exp == int(test_exp)].index  
-        test_samp = [tuple(x) for x in np.array(samples)[test_idx]]
+        test_samp = [x for i, x in enumerate(samples) if i in test_idx]
+        samples = [x for i, x in enumerate(samples) if i not in test_idx]
         df = df.drop(test_idx)
     else:
         test_samp = None
@@ -153,8 +154,8 @@ def main(args):
     with (hparams["checkpoint_callback"]["filepath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
     print(f'Saving in {hparams["checkpoint_callback"]["filepath"]}')
-    stop
-    model = SegmentCyst(hparams, splits[:-1])
+    
+    model = SegmentCyst(hparams, splits)
 
     logger = WandbLogger(name=name)
     logger.log_hyperparams(hparams)
