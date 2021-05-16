@@ -25,7 +25,7 @@ def get_args():
     parser = argparse.ArgumentParser(description=f'Test network for selected experiment or for teh full dataset.')
     parser.add_argument('exp', nargs='*', type=int, default=None, help="Exp between 1~4")
     parser.add_argument('-i', '--inpath', type=Path, default=None, help="Path in which to find the model weights. Alternative to 'exp'.")
-    parser.add_argument('--valid', nargs='?', default=False, const=True, help="If used, saples as taken from file 'samples_*' inside INPATH (only validation)")
+    parser.add_argument('-s', '--subset', default=None, help="If used, saples are taken from file 'samples_*' inside INPATH, using one of {test, valid,train} set.")
     parser.add_argument('-t', '--thresh', type=float, default=.5, help="threshold for discretization (None for heatmaps of the predictions). Default is 0.5.")
     parser.add_argument('-o', '--outpath', type=str, default='result', help="Name of the result folder. Default is 'result'.")
     args = parser.parse_args()
@@ -76,11 +76,11 @@ if args.exp:
     res_PATH.mkdir(exist_ok=True, parents=True)
     with Path(f"cv_perexp/exp{exp}/test_samples_oldnames.pickle").open("rb") as file:
         samples = pickle.load(file)
-if args.valid:
-    res_PATH = res_PATH / "valid"
+if args.subset:
+    res_PATH = res_PATH / args.subset
     res_PATH.mkdir(exist_ok=True, parents=True)
     with open(in_PATH / 'split_samples.pickle', 'rb') as file:
-        samples = pickle.load(file)['valid']
+        samples = pickle.load(file)[args.subset]
 else:
     samples = get_samples('artifacts/dataset:v6/images', 'artifacts/dataset:v6/masks')
 

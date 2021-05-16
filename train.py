@@ -78,7 +78,7 @@ else:
     hparams["mask_path"] = Path(hparams["mask_path"])
     
 splits = split_dataset(hparams)
-model = SegmentCyst(hparams, splits[:-1])
+model = SegmentCyst(hparams, splits)
 
 
 if "activate_attention_layers" in dir(model.model):

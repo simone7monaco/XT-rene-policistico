@@ -3,8 +3,8 @@ seed: 1989
 
 num_workers: 0
 test_experiment: 1
-image_path: "./sections/train/images"
-mask_path: "./sections/train/masks"
+image_path: "./sections2/images"
+mask_path: "./sections2/masks"
 
 val_split: 0.2
 
