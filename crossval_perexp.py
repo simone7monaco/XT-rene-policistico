@@ -1,6 +1,7 @@
 import argparse
 import os
 from pathlib import Path
+from zipfile import ZipFile
 import pandas as pd
 import numpy as np
 import ast
@@ -23,6 +24,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
+    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the config file. Default is 'latest'.", default='latest')
     parser.add_argument("-e", "--exp_tested", default=None, type=str, help="Experiment to put in test set, ")
     parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels.")
     
@@ -122,8 +124,23 @@ def main(args):
         msk = 'masks'
         subs = 'ALL'
         
-    hparams["image_path"] = Path(data_dir) / "images"
-    hparams["mask_path"] = Path(data_dir) / msk
+        
+    if str(args.dataset) != 'nw':
+        dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
+        data_dir = dataset.download()
+    #     data_dir = f"artifacts/dataset:{args.dataset}"
+
+        if not (Path(data_dir) / "images").exists():
+            zippath = next(Path(data_dir).iterdir())
+            with ZipFile(zippath, 'r') as zip_ref:
+                zip_ref.extractall(data_dir)
+
+        hparams["image_path"] = Path(data_dir) / "images"
+        hparams["mask_path"] = Path(data_dir) / msk
+    else:
+        hparams["image_path"] = Path(hparams["image_path"])
+        hparams["mask_path"] = Path(hparams["mask_path"])
+
     
     if args.exp_tested:
         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"

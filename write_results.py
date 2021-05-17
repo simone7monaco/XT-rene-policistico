@@ -389,6 +389,8 @@ def write_results(folder, is_jpg=False):
     np.seterr('raise')
     ROOT = Path('.')
     datafile = ROOT / folder / "summary_final.json"
+    if datafile.exists():
+        print(f"> {datafile} already exists!")
     res_model_PATH = ROOT / folder
     IM_dict = {}
     
@@ -413,22 +415,22 @@ def write_results(folder, is_jpg=False):
             
         # s['#recall'] = s['detected']/(s['detected'] + s['missed'] + 0.0001)
         
-        # gt = gt.ravel()
+        gt = gt.ravel()
         # gt = np.minimum(gt, np.ones_like(gt))
-        # pred_img = pred_img.ravel()
+        pred_img = pred_img.ravel()
         # pred_img = np.minimum(pred_img, np.ones_like(pred_img))
         
-        # cf = confusion_matrix(gt, pred_img).ravel() if gt.any() else [0, 0, 0, 0]
-        # TN, FP, FN, TP = cf #if len(cf)==4 else [0, 0, 0, 0]
-        # s['pxTP'] = TP
-        # s['pxFN'] = FN
-        # s['pxFP'] = FP
-        # s['pxTN'] = TN
+        cf = confusion_matrix(gt, pred_img).ravel() if gt.any() else [0, 0, 0, 0]
+        TN, FP, FN, TP = cf #if len(cf)==4 else [0, 0, 0, 0]
+        s['pxTP'] = int(TP)
+        s['pxFN'] = int(FN)
+        s['pxFP'] = int(FP)
+        s['pxTN'] = int(TN)
         
-        # s['iou'] = TP / (TP + FN + FP + .001)
-        # s['recall'] = TP / (TP + FN + .001)
-        # s['precision'] = TP / (TP + FP + .001)
-        # s['mcc'] = mcc(TP, TN, FP, FN)
+        s['iou'] = float(TP / (TP + FN + FP + .001))
+        s['recall'] = float(TP / (TP + FN + .001))
+        s['precision'] = float(TP / (TP + FP + .001))
+        s['mcc'] = float(mcc(TP, TN, FP, FN))
 
         IM_dict[name] = s
         
