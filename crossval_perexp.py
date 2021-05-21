@@ -136,6 +136,9 @@ def main(args):
         msk = 'masks'
         subs = 'ALL'
         
+    if args.test_tube:
+        subs = 'Single_TUBES'
+        
         
     if str(args.dataset) != 'nw':
         dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
