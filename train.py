@@ -121,7 +121,7 @@ logger = WandbLogger()
 logger.watch(model, log='all', log_freq=1)
 
 trainer = pl.Trainer(
-    gpus=1,
+    gpus=1 if torch.cuda.is_available() else 0,
 #     accumulate_grad_batches=4,
     max_epochs=100,
 #     distributed_backend="ddp",  # DistributedDataParallel
@@ -130,7 +130,7 @@ trainer = pl.Trainer(
     callbacks=[checkpoint_callback,
                earlystopping_callback,
               ],
-    precision=16,
+    precision=16 if torch.cuda.is_available() else 32,
     gradient_clip_val=5.0,
     num_sanity_val_steps=5,
     sync_batchnorm=True,

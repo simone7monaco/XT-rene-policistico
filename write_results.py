@@ -58,12 +58,13 @@ real_img_PATH = ROOT / 'artifacts/dataset:v6/images'
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val stratified from the others')
     parser.add_argument("-i", "--inpath", type=Path, help="Path containing image predicitions.", required=True)
+    parser.add_argument("-d", "--dataset", default='v6')
     
     return parser.parse_args()
 
 
 # 3 µm (valore minimo) ad uno di circa 40 µm (valore massimo). I valori medi invece sono tra i 6 e i 13 µm
-#     25 : 72 = µm : px
+# 25 : 72 = µm : px
 to_px = lambda m : m * 72 / 25
 to_m = lambda px : px * 25 / 72
 to_area_m = lambda Apx : (25/72)**2 * Apx
@@ -444,6 +445,9 @@ def write_results(folder, is_jpg=False):
 if __name__ == '__main__':
     args = get_args()
     res_model_PATH = Path(args.inpath)
+    
+    real_mask_PATH = ROOT / f'artifacts/dataset:{args.dataset}/masks'
+    real_img_PATH = ROOT / f'artifacts/dataset:{args.dataset}/images'
     
     t0 = time()
     write_results(res_model_PATH, is_jpg=True)

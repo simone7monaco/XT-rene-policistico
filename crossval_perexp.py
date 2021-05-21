@@ -25,8 +25,9 @@ def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
     parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the config file. Default is 'latest'.", default='latest')
-    parser.add_argument("-e", "--exp_tested", default=None, type=str, help="Experiment to put in test set, ")
-    parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels.")
+    parser.add_argument("-e", "--exp_tested", default=None, type=str, help="Experiment to put in test set")
+    parser.add_argument("-t", "--test_tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
+    parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels (only avaiable from 'v6' dataset).")
     
     parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
@@ -42,7 +43,7 @@ def date_to_exp(date):
     return date_exps[date]
 
 
-def split_dataset(hparams, k=0, test_exp=None, strat_nogroups=False):
+def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroups=False):
     samples = get_samples(hparams["image_path"], hparams["mask_path"])
     
     names = [file[0].stem for file in samples]
@@ -53,12 +54,18 @@ def split_dataset(hparams, k=0, test_exp=None, strat_nogroups=False):
     df["filename"] = names
     df["treatment"] = [u[1] for u in unpack]
     df["exp"] = [date_to_exp(u[0]) for u in unpack]
+    df["tube"] = [u[2] for u in unpack]
     df["te"] = df.treatment + '_' + df.exp.astype(str)
     df.te = df.te.astype('category')
     
-    if test_exp is not None:
-#         test_idx = df[df.te.isin(test_list)].index
-        test_idx = df[df.exp == int(test_exp)].index  
+    if test_exp is not None or leave_one_out is not None:
+        if leave_one_out:
+            tubes = df[['exp','tube']].astype(int).sort_values(by=['exp', 'tube']).drop_duplicates().reset_index().values[leave_one_out]
+            test_idx = df[(df.exp == tubes[1])&(df.tube == str(tubes[2]))].index
+            
+        else:
+            test_idx = df[df.exp == int(test_exp)].index
+    
         test_samp = [x for i, x in enumerate(samples) if i in test_idx]
         samples = [x for i, x in enumerate(samples) if i not in test_idx]
         df = df.drop(test_idx)
@@ -96,7 +103,10 @@ def main(args):
         print('HI LEGION!')
 
 #     name = f"crossval_exp{exp}"
-    name = f"fold_{args.kth_fold}_seed_{args.seed}"
+    if args.test_tube:
+        name = f"test_tube_{args.test_tube}_seed_{args.seed}"
+    else:
+        name = f"fold_{args.kth_fold}_seed_{args.seed}"
     wandb.login()
 
     run = wandb.init(project="upp", entity="smonaco", name=name)
@@ -107,7 +117,9 @@ def main(args):
     print("---------------------------------------")
     print("        Running Crossvalidation        ")
     if args.exp_tested:
-        print(f"          exp: {args.exp_tested}  ")
+        print(f"           exp: {args.exp_tested}  ")
+    if args.test_tube:
+        print(f"     test_tube: {args.test_tube}  ")
     print(f"          seed: {args.seed}           ")
     print(f"          fold: {args.kth_fold}       ")
     print("---------------------------------------\n")
@@ -166,7 +178,7 @@ def main(args):
     )
     
 #     test_list = ast.literal_eval(args.test_list) if args.test_list else None
-    splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp_tested, strat_nogroups=args.stratify_fold)
+    splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp_tested, leave_one_out=args.test_tube, strat_nogroups=args.stratify_fold)
     
     with (hparams["checkpoint_callback"]["filepath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
@@ -179,7 +191,7 @@ def main(args):
     logger.watch(model, log='all', log_freq=1)
 
     trainer = pl.Trainer(
-        gpus=1,
+        gpus=1 if torch.cuda.is_available() else 0,
     #     accumulate_grad_batches=4,
         max_epochs=100,
     #     distributed_backend="ddp",  # DistributedDataParallel
@@ -188,7 +200,7 @@ def main(args):
         callbacks=[checkpoint_callback,
                    earlystopping_callback
                   ],
-        precision=16,
+        precision=16 if torch.cuda.is_available() else 32,
         gradient_clip_val=5.0,
         num_sanity_val_steps=5,
         sync_batchnorm=True,

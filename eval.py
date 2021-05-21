@@ -94,8 +94,7 @@ dataloader = DataLoader(
         drop_last=False,
     )
 
-try:
-    assert not any(res_PATH.iterdir())
+if not any(res_PATH.glob('*.png')):
 
     desc = f" Test model exp {exp}" if args.exp else f" Test model ({args.inpath})"
     model.eval()
@@ -117,5 +116,5 @@ try:
                     sns.heatmap(result, ax=ax, xticklabels=False, yticklabels=False, cmap='jet', cbar=False)
                     plt.savefig(res_PATH / f"{name}.png")
 
-except:
+else:
     print(f" Test for {args.inpath} already done")
