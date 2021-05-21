@@ -25,7 +25,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
     parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the config file. Default is 'latest'.", default='latest')
-    parser.add_argument("-e", "--exp_tested", default=None, type=str, help="Experiment to put in test set")
+    parser.add_argument("-e", "--exp_tested", default=None, type=int, help="Experiment to put in test set")
     parser.add_argument("-t", "--test_tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
     parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels (only avaiable from 'v6' dataset).")
     
@@ -59,12 +59,12 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
     df.te = df.te.astype('category')
     
     if test_exp is not None or leave_one_out is not None:
-        if leave_one_out:
+        if leave_one_out is not None:
             tubes = df[['exp','tube']].astype(int).sort_values(by=['exp', 'tube']).drop_duplicates().reset_index().values[leave_one_out]
             test_idx = df[(df.exp == tubes[1])&(df.tube == str(tubes[2]))].index
             
         else:
-            test_idx = df[df.exp == int(test_exp)].index
+            test_idx = df[df.exp == test_exp].index
     
         test_samp = [x for i, x in enumerate(samples) if i in test_idx]
         samples = [x for i, x in enumerate(samples) if i not in test_idx]
@@ -116,9 +116,9 @@ def main(args):
     
     print("---------------------------------------")
     print("        Running Crossvalidation        ")
-    if args.exp_tested:
+    if args.exp_tested is not None:
         print(f"           exp: {args.exp_tested}  ")
-    if args.test_tube:
+    if args.test_tube is not None:
         print(f"     test_tube: {args.test_tube}  ")
     print(f"          seed: {args.seed}           ")
     print(f"          fold: {args.kth_fold}       ")
@@ -136,7 +136,7 @@ def main(args):
         msk = 'masks'
         subs = 'ALL'
         
-    if args.test_tube:
+    if args.test_tube is not None:
         subs = 'Single_TUBES'
         
         
