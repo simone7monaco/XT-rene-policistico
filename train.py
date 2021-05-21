@@ -97,7 +97,7 @@ if "activate_attention_layers" in dir(model.model):
     model.model.activate_attention_layers(active_attention_layers)
 
 # hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
-hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / 'tmp'
+hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
 hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
 checkpoint_callback = ModelCheckpoint(
