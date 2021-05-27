@@ -96,7 +96,7 @@ dataloader = DataLoader(
 
 if not any(res_PATH.glob('*.png')):
 
-    desc = f" Test model exp {exp}" if args.exp else f" Test model ({args.inpath})"
+    desc = f" Test model exp {exp}" if args.exp else f" Test model ({'/'.join(str(args.inpath).split('/')[-2:])})"
     model.eval()
     with torch.no_grad():
         for data in tqdm(dataloader, desc=desc):
