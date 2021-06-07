@@ -105,7 +105,7 @@ def main(args):
         print('HI LEGION!')
 
 #     name = f"crossval_exp{exp}"
-    if args.test_tube:
+    if args.test_tube is not None:
         name = f"test_tube_{args.test_tube}_seed_{args.seed}"
     else:
         name = f"fold_{args.kth_fold}_seed_{args.seed}"
@@ -167,7 +167,7 @@ def main(args):
     if args.exp_tested:
         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"
     
-    
+    subs = 'prepr' 
     hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / subs / wandb.run.name
     hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
