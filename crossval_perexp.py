@@ -24,7 +24,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
-    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the config file. Default is 'latest'.", default='latest')
+    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='latest')
     parser.add_argument("-e", "--exp_tested", default=None, type=int, help="Experiment to put in test set")
     parser.add_argument("-t", "--test_tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
     parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels (only avaiable from 'v6' dataset).")
@@ -32,6 +32,8 @@ def get_args():
     parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
     parser.add_argument("--stratify_fold", nargs='?', default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
+    parser.add_argument("--tiling", nargs='?', default=False, const=True, help="If applied, uses the latest tiled-dataset available in WB.")
+    parser.add_argument('--discard_results', nargs='?', default=False, const=True, help = "Prevent Wandb to save validation result for each step.")
     
     
     return parser.parse_args()
@@ -110,12 +112,12 @@ def main(args):
     wandb.login()
 
     run = wandb.init(project="upp", entity="smonaco", name=name)
-
-    dataset = run.use_artifact('rene-policistico/upp/dataset:latest', type='dataset')
-    data_dir = dataset.download()
+    
     
     print("---------------------------------------")
     print("        Running Crossvalidation        ")
+    if args.tiling:
+        print("         with tiled dataset        ")
     if args.exp_tested is not None:
         print(f"           exp: {args.exp_tested}  ")
     if args.test_tube is not None:
@@ -140,7 +142,7 @@ def main(args):
         subs = 'Single_TUBES'
         
         
-    if str(args.dataset) != 'nw':
+    if str(args.dataset) != 'nw' and not args.tiling:
         dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
         data_dir = dataset.download()
     #     data_dir = f"artifacts/dataset:{args.dataset}"
@@ -150,6 +152,10 @@ def main(args):
             with ZipFile(zippath, 'r') as zip_ref:
                 zip_ref.extractall(data_dir)
 
+        hparams["image_path"] = Path(data_dir) / "images"
+        hparams["mask_path"] = Path(data_dir) / msk
+    elif args.tiling:
+        data_dir = "artifacts/tiled-dataset:v0"
         hparams["image_path"] = Path(data_dir) / "images"
         hparams["mask_path"] = Path(data_dir) / msk
     else:
@@ -180,14 +186,12 @@ def main(args):
         mode='max',
     )
     
-#     test_list = ast.literal_eval(args.test_list) if args.test_list else None
     splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp_tested, leave_one_out=args.test_tube, strat_nogroups=args.stratify_fold)
-    
     with (hparams["checkpoint_callback"]["filepath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
     print(f'Saving in {hparams["checkpoint_callback"]["filepath"]}')
     
-    model = SegmentCyst(hparams, splits)
+    model = SegmentCyst(hparams, splits, discard_res=args.discard_results)
 
     logger = WandbLogger(name=name)
     logger.log_hyperparams(hparams)

@@ -58,7 +58,7 @@ real_img_PATH = ROOT / 'artifacts/dataset:v6/images'
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val stratified from the others')
     parser.add_argument("-i", "--inpath", type=Path, help="Path containing image predicitions.", required=True)
-    parser.add_argument("-d", "--dataset", default='v6')
+    parser.add_argument("-d", "--dataset", default='v7')
     
     return parser.parse_args()
 
@@ -197,7 +197,12 @@ def calc_full_sizes(mask, name, thr=10):
 from simplify_names import unpack_name as get_packs
 
 def unpack_name(name):
-    date, treatment, tube, zstack, side = get_packs(name.strip())
+    try:
+        date, treatment, tube, zstack, side = get_packs(name.strip())
+    except:
+        print(f'Error for {name}')
+        assert False
+        
     return {
         'date' : date,  # pd.Timestamp(tmp[1].split('-')[-1]),
         'treatment' : treatment,
@@ -236,31 +241,6 @@ def showlinks(df):
     df = df.to_html(render_links=True, escape=False)
     display(HTML(df))
 
-# def missed_wrong_cysts_finer(gt, pred, thr=30, min_overlap=.3):
-#     gt_contours, _ = cv2.findContours(gt, cv2.RETR_TREE, 
-#                                     cv2.CHAIN_APPROX_SIMPLE) 
-#     pred_contours, _ = cv2.findContours(pred, cv2.RETR_TREE, 
-#                                     cv2.CHAIN_APPROX_SIMPLE)
-    
-#     detected = 0
-#     for i, c in enumerate(gt_contours):
-#         single_gt = np.zeros_like(gt)
-#         cv2.fillPoly(single_gt, pts=[c], color=(1))
-        
-#         for j, cp in enumerate(pred_contours):
-#             if cv2.contourArea(cp) < thr: continue            # thr ~ 1/2 theoretical minimum
-#             single_pred = np.zeros_like(pred)
-#             cv2.fillPoly(single_pred, pts=[cp], color=(1))
-            
-#             I = np.logical_and(single_gt, single_pred)
-#             overlap = I.sum()/single_gt.sum()
-#             if overlap  > min_overlap:
-#                 detected +=1
-    
-#     missed = len(gt_contours) - detected
-#     wrong = len(pred_contours) - detected
-
-#     return len(gt_contours), detected, missed, wrong
 
 def overlapping_areas(gt, pred):
     gt_contours, _ = cv2.findContours(gt, cv2.RETR_TREE, 
@@ -392,6 +372,7 @@ def write_results(folder, is_jpg=False):
     datafile = ROOT / folder / "summary_final.json"
     if datafile.exists():
         print(f"> {datafile} already exists!")
+        return
     res_model_PATH = ROOT / folder
     IM_dict = {}
     
