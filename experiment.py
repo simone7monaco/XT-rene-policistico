@@ -1,3 +1,4 @@
+
 from pathlib import Path
 from pytorch_toolbelt.losses import JaccardLoss, BinaryFocalLoss, BinarySoftF1Loss
 import torch
@@ -28,6 +29,7 @@ import os
 class SegmentCyst(pl.LightningModule):
     def __init__(self, hparams, splits=[None, None], discard_res=False):
         super().__init__()
+        self.discard_res = discard_res
         self.hparams = hparams
         self.train_images = Path(self.hparams["checkpoint_callback"]["filepath"]) / "images/train_predictions"
         self.train_images.mkdir(exist_ok=True, parents=True)
