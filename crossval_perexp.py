@@ -140,7 +140,8 @@ def main(args):
         
     if args.test_tube is not None:
         subs = 'Single_TUBES'
-        
+    if args.tiling:
+        subs = 'tiled/' + subs
         
     if str(args.dataset) != 'nw' and not args.tiling:
         dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
