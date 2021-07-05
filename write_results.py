@@ -320,14 +320,14 @@ def mcc(TP, TN, FP, FN, N=None):
 
 
 
-def missed_wrong_cysts_dict(gt, pred):
-    cysts = {}
+def missed_wrong_cysts_dict(gt: np.array, pred: np.array, cutoff=288): #TODO: Specify returns
+    cysts = []
     
     gt_contours, _ = cv2.findContours(gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     pred_contours, _ = cv2.findContours(pred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    gt_contours = np.array([c for c in gt_contours if c.size > 4])
-    pred_contours = np.array([c for c in pred_contours if c.size > 4 and cv2.contourArea(c)>5])
+    gt_contours = np.array([c for c in gt_contours if c.size > 4 and cv2.contourArea(c)>cutoff])
+    pred_contours = np.array([c for c in pred_contours if c.size > 4 and cv2.contourArea(c)>cutoff])
     
     gt_seps = np.array([csr_matrix(cv2.fillPoly(np.zeros_like(gt), pts=[c], color=(1))) for c in gt_contours], dtype=object)
     
@@ -344,56 +344,83 @@ def missed_wrong_cysts_dict(gt, pred):
         if curr_detection.any():
             best_p = np.argmax([cv2.contourArea(cp) for cp in pred_contours[curr_detection]])
             areas = (cv2.contourArea(c), cv2.contourArea(pred_contours[curr_detection][best_p]))
-            centers = (center(c), center(pred_contours[curr_detection][best_p]))
-            cysts[next(count)] = {'state': 'detected', 'areas': areas, 'centers': centers}
+#            centers = (center(c), center(pred_contours[curr_detection][best_p]))
+            cysts.append({'state': 'detected', 
+    					'area_real': areas[0], 
+    					'area_pred': areas[1], 
+#             					'centers': centers
+    					})
             for c_p in np.hstack((pred_contours[curr_detection][:best_p], pred_contours[curr_detection][best_p+1:])):
                 areas = (cv2.contourArea(c), cv2.contourArea(c_p))
-                centers = (center(c), center(pred_contours[curr_detection][best_p]))
-                cysts[next(count)] = {'state': 'overcounted', 'areas': areas, 'centers': centers}
+#                centers = (center(c), center(pred_contours[curr_detection][best_p]))
+                cysts.append({'state': 'overcounted',
+        					'area_real': areas[0], 
+        					'area_pred': areas[1], 
+#             					'centers': centers
+        					})
 
         else:
             areas = (cv2.contourArea(c), None)
-            centers = (center(c), None)
-            cysts[next(count)] = {'state': 'missed', 'areas': areas, 'centers': centers}
+#            centers = (center(c), None)
+            cysts.append({'state': 'missed',
+    					'area_real': areas[0], 
+    					'area_pred': areas[1],
+#            					'centers': centers
+    					})
 
     sparse_gt = csr_matrix(gt)
     for single_pred, c in zip(pred_seps, pred_contours):
         if not single_pred.multiply(sparse_gt).count_nonzero():
             areas = (None, cv2.contourArea(c))
-            centers = (None, center(c))
-            cysts[next(count)] = {'state': 'wrong', 'areas': areas, 'centers': centers}
+#            centers = (None, center(c))
+            cysts.append({'state': 'wrong',
+    					'area_real': areas[0], 
+    					'area_pred': areas[1], 
+#            					'centers': centers
+    					})
 
     return cysts, len(gt_contours), len(pred_contours)
 
 
 def write_results(folder, is_jpg=False):
     np.seterr('raise')
-    ROOT = Path('.')
-    datafile = ROOT / folder / "summary_final.json"
-    if datafile.exists():
-        print(f"> {datafile} already exists!")
+    datafile_im = folder / "images_table.csv"
+	datafile_cy = folder / "cysts_table.csv"
+    if datafile_im.exists():
+        print(f"> Table in {folder.stem} already exists!")
         return
-    res_model_PATH = ROOT / folder
     IM_dict = {}
     
 #     stack = deque([{}, {}])
     
 #     suffix = '*.jpg' if is_jpg else '*.png'
+
+    IM_df = pd.Dataframe([])
+    CYST_df = pd.Dataframe([])
     
-    paths = sorted(res_model_PATH.glob('*.png'))
+    eval_name = folder.stem
+    
+    paths = sorted(folder.glob('*.png'))
 #     paths = random.sample(paths, 30)
     for i, pred in enumerate(tqdm(paths, desc=str(folder))):
         name = pred.stem
-        s = {} # dict of cysts as {'state': state, 'areas': [AREA_real, AREA_pred], 'centers': [(x_r, y_r), (x_p, y_p)]}
+        IM_s = np.Series({"Analysis": eval_name}, name=name) 
+        CYST_s = np.Series({"Analysis": eval_name}) # Cyst row with {'state': state, AREA_real, AREA_pred, 'centers': [(x_r, y_r), (x_p, y_p)]}
+        
+        for s, v in unpack_name:
+        	IM_s[s] = v
+        	CYST_s[s] = v
+        	
+        # dict of cysts as {'state': state, 'areas': [AREA_real, AREA_pred], 'centers': [(x_r, y_r), (x_p, y_p)]}
 #         s.name = get_old_name(name)            
             
         assert (real_mask_PATH / f'{name}.png').exists(), real_mask_PATH / f'{name}.png'
         gt = open_mask(real_mask_PATH / f'{name}.png')
         pred_img = open_mask(pred)
         
-        s['cysts'], s['total_real'], s['total_pred'] = missed_wrong_cysts_dict(gt, pred_img)
+        cysts, s_IM['total_real'], s_IM['total_pred'] = missed_wrong_cysts_dict(gt, pred_img)
         
-        s['tube_area'] = tube_area(name)
+        IM_s['tube_area'] = tube_area(name)
             
         # s['#recall'] = s['detected']/(s['detected'] + s['missed'] + 0.0001)
         
@@ -404,28 +431,33 @@ def write_results(folder, is_jpg=False):
         
         cf = confusion_matrix(gt, pred_img).ravel() if gt.any() else [0, 0, 0, 0]
         TN, FP, FN, TP = cf #if len(cf)==4 else [0, 0, 0, 0]
-        s['pxTP'] = int(TP)
-        s['pxFN'] = int(FN)
-        s['pxFP'] = int(FP)
-        s['pxTN'] = int(TN)
+        IM_s['pxTP'] = int(TP)
+        IM_s['pxFN'] = int(FN)
+        IM_s['pxFP'] = int(FP)
+        IM_s['pxTN'] = int(TN)
         
-        s['iou'] = float(TP / (TP + FN + FP + .001))
-        s['recall'] = float(TP / (TP + FN + .001))
-        s['precision'] = float(TP / (TP + FP + .001))
-        s['mcc'] = float(mcc(TP, TN, FP, FN))
+        IM_s['iou'] = float(TP / (TP + FN + FP + .001))
+        IM_s['recall'] = float(TP / (TP + FN + .001))
+        IM_s['precision'] = float(TP / (TP + FP + .001))
+        IM_s['mcc'] = float(mcc(TP, TN, FP, FN))
 
-        IM_dict[name] = s
+        IM_df = IM_df.append(IM_s)
+        # TODO: Test if it works
+        for c in cysts:
+	        CYST_df = CYST_df.append(CYST_s.append(c),
+	        						ignore_index=True)
         
-#     pickle.dump(IM_dict, open(datafile, 'wb'))
-    json.dump(IM_dict, open(datafile, 'w'))
-    print(f'Results saved in "{datafile}"')
+#     json.dump(IM_dict, open(datafile, 'w'))
+	IM_df.to_csv(datafile_im)
+	CYST_df.to_csv(datafile_cy)
+    print(f'Results saved in "{datafile_im.parent}"')
     return
     
     
 
 if __name__ == '__main__':
     args = get_args()
-    res_model_PATH = Path(args.inpath)
+    res_model_PATH = args.inpath
     
     real_mask_PATH = ROOT / f'artifacts/dataset:{args.dataset}/masks'
     real_img_PATH = ROOT / f'artifacts/dataset:{args.dataset}/images'
