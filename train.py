@@ -36,6 +36,8 @@ def get_args():
     parser.add_argument("--transf_crop", type=int, default=None, help="Portion of the image of size 1024/n")
     parser.add_argument("--transf_enhancement", type=int, default=None, help="Add enhancement on images for sweep.")
     
+    parser.add_argument("--alternative_model", type=str, default=None, help="Select model different from U++.")
+    
     parser.add_argument('-a', '--active_attention_layers', help="List of Active Attention layer (between 1~4). Write [1,3] to set AAL on blocks 1 and 3.", default=None)
     parser.add_argument('-a1', '--active_attention_layer1', type=str2bool, help="Activate Attention layer 1", nargs='?', const=True, default=False)
     parser.add_argument('-a2', '--active_attention_layer2', type=str2bool, help="Activate Attention layer 2", nargs='?', const=True, default=False)
@@ -62,9 +64,9 @@ wandb.login()
 run = wandb.init(project="ca-net", entity="rene-policistico", config=hparams, settings=wandb.Settings(start_method='fork'))
 
 if str(args.dataset) != 'nw':
-#     dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
-#     data_dir = dataset.download()
-    data_dir = f"artifacts/dataset:{args.dataset}"
+    dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
+    data_dir = dataset.download()
+#     data_dir = f"artifacts/dataset:{args.dataset}"
 
     if not (Path(data_dir) / "images").exists():
         zippath = next(Path(data_dir).iterdir())
@@ -78,7 +80,7 @@ else:
     hparams["mask_path"] = Path(hparams["mask_path"])
     
 splits = split_dataset(hparams)
-model = SegmentCyst(hparams, splits)
+model = SegmentCyst(hparams, splits, alternative_model=args.alternative_model)
 
 
 if "activate_attention_layers" in dir(model.model):

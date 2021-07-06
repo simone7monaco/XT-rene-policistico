@@ -76,14 +76,14 @@ train_aug:
       - __class_fullname__: albumentations.augmentations.transforms.RandomRotate90
         always_apply: False
         p: 0.5
-#       - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
-#         p: 1.0
-#       - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
-#         always_apply: false
-#         p: 0.5
-#       - __class_fullname__: albumentations.augmentations.transforms.CLAHE
-#         always_apply: false
-#         p: 0.5
+      - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
+        p: 1.0
+      - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
+        always_apply: false
+        p: 0.5
+      - __class_fullname__: albumentations.augmentations.transforms.CLAHE
+        always_apply: false
+        p: 0.5
       - __class_fullname__: albumentations.augmentations.transforms.Normalize
         always_apply: false
         max_pixel_value: 255.0
@@ -116,14 +116,14 @@ val_aug:
         min_width: 800
         p: 1
         value: 0
-#       - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
-#         p: 1.0
-#       - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
-#         always_apply: false
-#         p: 0.5
-#       - __class_fullname__: albumentations.augmentations.transforms.CLAHE
-#         always_apply: false
-#         p: 0.5
+      - __class_fullname__: albumentations.augmentations.transforms.RandomBrightnessContrast
+        p: 1.0
+      - __class_fullname__: albumentations.augmentations.transforms.RandomGamma
+        always_apply: false
+        p: 0.5
+      - __class_fullname__: albumentations.augmentations.transforms.CLAHE
+        always_apply: false
+        p: 0.5
       - __class_fullname__: albumentations.augmentations.transforms.Normalize
         always_apply: false
         max_pixel_value: 255.0

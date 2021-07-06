@@ -29,6 +29,8 @@ def get_args():
     parser.add_argument("-t", "--test_tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
     parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels (only avaiable from 'v6' dataset).")
     
+    parser.add_argument("--alternative_model", type=str, default=None, help="Select model different from U++.")
+
     parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
     parser.add_argument("--stratify_fold", nargs='?', default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
@@ -49,7 +51,9 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
     samples = get_samples(hparams["image_path"], hparams["mask_path"])
     
     names = [file[0].stem for file in samples]
-    
+#     for name in names:
+#         print(name)
+#         unpack = unpack_name(name)
 #     date, treatment, tube, zstack, side =
     unpack = [unpack_name(name) for name in names]
     df = pd.DataFrame([])

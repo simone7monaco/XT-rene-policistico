@@ -14,7 +14,11 @@ import torchvision.utils as vutils
 from dataloaders import SegmentationDataset
 from metrics import binary_mean_iou
 from utils import get_samples
+
 import segmentation_models_pytorch as smp
+from ColonSegNet import CompNet
+from Pranet_lib.PraNet_Res2Net import PraNet
+
 from utils import find_average, state_dict_from_disk
 from albumentations.core.serialization import from_dict
 from typing import Dict
@@ -27,7 +31,7 @@ import os
 
 
 class SegmentCyst(pl.LightningModule):
-    def __init__(self, hparams, splits=[None, None], discard_res=False):
+    def __init__(self, hparams, splits=[None, None], discard_res=False, alternative_model=None):
         super().__init__()
         self.discard_res = discard_res
         self.hparams = hparams
@@ -36,7 +40,15 @@ class SegmentCyst(pl.LightningModule):
         self.val_images =  Path(self.hparams["checkpoint_callback"]["filepath"]) / "images/valid_predictions"
         self.val_images.mkdir(exist_ok=True, parents=True)
         
-        self.model = object_from_dict(self.hparams["model"])
+        if alternative_model == 'colonsegnet':
+            self.model = CompNet()
+        elif alternative_model == 'pranet':
+            self.model = PraNet()
+        elif alternative_model == 'pspnet':
+            self.model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
+        else:
+            self.model = object_from_dict(self.hparams["model"])
+            
         if "resume_from_checkpoint" in self.hparams:
             corrections: Dict[str, str] = {"model.": ""}
 
