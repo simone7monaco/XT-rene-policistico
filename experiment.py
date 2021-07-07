@@ -18,6 +18,7 @@ from utils import get_samples
 import segmentation_models_pytorch as smp
 from ColonSegNet import CompNet
 from Pranet_lib.PraNet_Res2Net import PraNet
+from HarDNet import hardnet
 
 from utils import find_average, state_dict_from_disk
 from albumentations.core.serialization import from_dict
@@ -44,6 +45,8 @@ class SegmentCyst(pl.LightningModule):
             self.model = CompNet()
         elif alternative_model == 'pranet':
             self.model = PraNet()
+        elif alternative_model == 'hardnet':
+            self.model = hardnet()
         elif alternative_model == 'pspnet':
             self.model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
         else:
