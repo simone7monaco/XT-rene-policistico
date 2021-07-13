@@ -196,7 +196,7 @@ def main(args):
         pickle.dump(splits, file)
     print(f'Saving in {hparams["checkpoint_callback"]["filepath"]}')
     
-    model = SegmentCyst(hparams, splits, discard_res=args.discard_results)
+    model = SegmentCyst(hparams, splits, discard_res=args.discard_results, alternative_model=args.alternative_model)
 
     logger = WandbLogger(name=name)
     logger.log_hyperparams(hparams)

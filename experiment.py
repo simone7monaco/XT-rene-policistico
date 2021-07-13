@@ -1,3 +1,5 @@
+import yaml
+from easydict import EasyDict as ed
 
 from pathlib import Path
 from pytorch_toolbelt.losses import JaccardLoss, BinaryFocalLoss, BinarySoftF1Loss
@@ -18,7 +20,7 @@ from utils import get_samples
 import segmentation_models_pytorch as smp
 from ColonSegNet import CompNet
 from Pranet_lib.PraNet_Res2Net import PraNet
-from HarDNet import hardnet
+from HarDNetMSEG.lib.HarDMSEG import HarDMSEG
 
 from utils import find_average, state_dict_from_disk
 from albumentations.core.serialization import from_dict
@@ -44,13 +46,20 @@ class SegmentCyst(pl.LightningModule):
         if alternative_model == 'colonsegnet':
             self.model = CompNet()
         elif alternative_model == 'pranet':
-            self.model = PraNet()
+            conf = ed(yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader))
+            model = eval(conf.Model.name)(conf.Model)
         elif alternative_model == 'hardnet':
-            self.model = hardnet()
+            self.model = HarDMSEG()
         elif alternative_model == 'pspnet':
             self.model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
+        elif alternative_model == 'uacanet':
+            print(">>>>>>> UACA!!")
+            conf = ed(yaml.load(open("UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
+            model = eval(conf.Model.name)(conf.Model)
+    
         else:
             self.model = object_from_dict(self.hparams["model"])
+            
             
         if "resume_from_checkpoint" in self.hparams:
             corrections: Dict[str, str] = {"model.": ""}

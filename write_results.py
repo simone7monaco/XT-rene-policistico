@@ -385,7 +385,7 @@ def missed_wrong_cysts_dict(gt: np.array, pred: np.array, cutoff=288): #TODO: Sp
 def write_results(folder, is_jpg=False):
     np.seterr('raise')
     datafile_im = folder / "images_table.csv"
-	datafile_cy = folder / "cysts_table.csv"
+    datafile_cy = folder / "cysts_table.csv"
     if datafile_im.exists():
         print(f"> Table in {folder.stem} already exists!")
         return
@@ -395,22 +395,24 @@ def write_results(folder, is_jpg=False):
     
 #     suffix = '*.jpg' if is_jpg else '*.png'
 
-    IM_df = pd.Dataframe([])
-    CYST_df = pd.Dataframe([])
+    IM_df = pd.DataFrame([])
+    CYST_df = pd.DataFrame([])
     
     eval_name = folder.stem
     
     paths = sorted(folder.glob('*.png'))
+    print(len(paths))
 #     paths = random.sample(paths, 30)
     for i, pred in enumerate(tqdm(paths, desc=str(folder))):
         name = pred.stem
-        IM_s = np.Series({"Analysis": eval_name}, name=name) 
-        CYST_s = np.Series({"Analysis": eval_name}) # Cyst row with {'state': state, AREA_real, AREA_pred, 'centers': [(x_r, y_r), (x_p, y_p)]}
+        IM_s = pd.Series({"Analysis": eval_name}, name=name) 
+        CYST_s = pd.Series({"Analysis": eval_name}) # Cyst row with {'state': state, AREA_real, AREA_pred, 'centers': [(x_r, y_r), (x_p, y_p)]}
         
-        for s, v in unpack_name:
-        	IM_s[s] = v
-        	CYST_s[s] = v
-        	
+        CYST_s["name"] = name
+        for s, v in unpack_name(name).items():
+            IM_s[s] = v
+            CYST_s[s] = v
+
         # dict of cysts as {'state': state, 'areas': [AREA_real, AREA_pred], 'centers': [(x_r, y_r), (x_p, y_p)]}
 #         s.name = get_old_name(name)            
             
@@ -418,7 +420,7 @@ def write_results(folder, is_jpg=False):
         gt = open_mask(real_mask_PATH / f'{name}.png')
         pred_img = open_mask(pred)
         
-        cysts, s_IM['total_real'], s_IM['total_pred'] = missed_wrong_cysts_dict(gt, pred_img)
+        cysts, IM_s['total_real'], IM_s['total_pred'] = missed_wrong_cysts_dict(gt, pred_img)
         
         IM_s['tube_area'] = tube_area(name)
             
@@ -444,12 +446,12 @@ def write_results(folder, is_jpg=False):
         IM_df = IM_df.append(IM_s)
         # TODO: Test if it works
         for c in cysts:
-	        CYST_df = CYST_df.append(CYST_s.append(c),
-	        						ignore_index=True)
+            CYST_df = CYST_df.append(CYST_s.append(pd.Series(c)),
+                                    ignore_index=True)
         
 #     json.dump(IM_dict, open(datafile, 'w'))
-	IM_df.to_csv(datafile_im)
-	CYST_df.to_csv(datafile_cy)
+    IM_df.to_csv(datafile_im)
+    CYST_df.to_csv(datafile_cy)
     print(f'Results saved in "{datafile_im.parent}"')
     return
     
@@ -463,5 +465,5 @@ if __name__ == '__main__':
     real_img_PATH = ROOT / f'artifacts/dataset:{args.dataset}/images'
     
     t0 = time()
-    write_results(res_model_PATH, is_jpg=True)
+    write_results(res_model_PATH, is_jpg=False)
     print(f"\n__________________ Finished in {time()-t0} s __________________")
