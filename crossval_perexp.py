@@ -115,6 +115,7 @@ def main(args):
         name = f"fold_{args.kth_fold}_seed_{args.seed}"
     wandb.login()
 
+    name = None
     run = wandb.init(project="upp", entity="smonaco", name=name)
     
     
@@ -171,7 +172,7 @@ def main(args):
     if args.exp_tested:
         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"
     
-    subs = 'prepr' 
+    subs = 'Comparison' 
     hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / subs / wandb.run.name
     hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
