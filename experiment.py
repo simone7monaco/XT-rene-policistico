@@ -21,6 +21,11 @@ import segmentation_models_pytorch as smp
 from ColonSegNet import CompNet
 from Pranet_lib.PraNet_Res2Net import PraNet
 from HarDNetMSEG.lib.HarDMSEG import HarDMSEG
+from UACANet.lib.PraNet import PraNet
+from UACANet.lib.UACANet import UACANet
+from UACANet.utils import *
+from UACANet.lib import *
+from UACANet.lib.losses import *
 
 from utils import find_average, state_dict_from_disk
 from albumentations.core.serialization import from_dict
@@ -47,15 +52,14 @@ class SegmentCyst(pl.LightningModule):
             self.model = CompNet()
         elif alternative_model == 'pranet':
             conf = ed(yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader))
-            model = eval(conf.Model.name)(conf.Model)
+            self.model = eval(conf.Model.name)(conf.Model)
         elif alternative_model == 'hardnet':
             self.model = HarDMSEG()
         elif alternative_model == 'pspnet':
             self.model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
         elif alternative_model == 'uacanet':
-            print(">>>>>>> UACA!!")
             conf = ed(yaml.load(open("UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
-            model = eval(conf.Model.name)(conf.Model)
+            self.model = eval(conf.Model.name)(conf.Model)
     
         else:
             self.model = object_from_dict(self.hparams["model"])
