@@ -18,8 +18,8 @@ from metrics import binary_mean_iou
 from utils import get_samples
 
 import segmentation_models_pytorch as smp
-from ColonSegNet import CompNet
-from Pranet_lib.PraNet_Res2Net import PraNet
+# from ColonSegNet import CompNet
+# from Pranet_lib.PraNet_Res2Net import PraNet
 from HarDNetMSEG.lib.HarDMSEG import HarDMSEG
 from UACANet.lib.PraNet import PraNet
 from UACANet.lib.UACANet import UACANet
