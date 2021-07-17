@@ -224,6 +224,9 @@ def main(args):
     trainer.fit(model)
     
     if args.eval_network:
+        device = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
+        model = model.to(device)
+        model.model = model.model.to(device)
         eval_model(args=ed(inpath=hparams["checkpoint_callback"]["filepath"],
                            subset='test',
                            exp=None,
