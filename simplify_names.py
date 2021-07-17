@@ -14,7 +14,7 @@ def get_args():
 
 all_treats = {'ctrl', 't3', 'triac', 't4', 'tetrac', 'resv', 'dbd', 'lm609', 'uo', 'dbd+t4', 'uo+t4', 'lm609+t4'}
 
-def unpack_name(filename):
+def get_packs(filename):
     unpack = re.split(' {1,}_?|_', filename.strip())
     
     date_idx = [i for i, item in enumerate(unpack) if re.search('[0-9]{1,2}.[0-9]{1,2}.[0-9]{2,4}', item)][0]
@@ -55,7 +55,7 @@ def main():
 #                if filename.startswith("experiment"): continue
                 
                 # print(filename)
-                date, treatment, tube, zstack, side = unpack_name(filename)
+                date, treatment, tube, zstack, side = get_data(filename)
 
             #     print(f'experiment_{date}_{treatment}_{tube}_{zstack}_{side}{extension}\n')
                 new_name = f'experiment_{date}_{treatment}_{tube}_{zstack}_{side}{extension}'

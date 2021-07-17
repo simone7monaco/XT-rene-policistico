@@ -60,6 +60,14 @@ if torch.cuda.device_count() > 1:
 
 hparams = get_sweep(hparams, args)
 
+print("---------------------------------------")
+print("        Running Training        ")
+
+for v in vars(args):
+    if getattr(args, v):
+        print(f"           {v}: {getattr(args, v)}  ")
+print("---------------------------------------\n")
+
 wandb.login()
 run = wandb.init(project="ca-net", entity="rene-policistico", config=hparams, settings=wandb.Settings(start_method='fork'))
 
@@ -99,7 +107,7 @@ if "activate_attention_layers" in dir(model.model):
     model.model.activate_attention_layers(active_attention_layers)
 
 # hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
-hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
+hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / "Search" / wandb.run.name
 hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
 checkpoint_callback = ModelCheckpoint(
@@ -109,6 +117,7 @@ checkpoint_callback = ModelCheckpoint(
     mode="max",
     save_top_k=1,
 )
+print(f'\nSaving in {hparams["checkpoint_callback"]["filepath"]}\n')
 
 earlystopping_callback = EarlyStopping(
         monitor='val_iou',

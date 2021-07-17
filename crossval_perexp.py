@@ -1,4 +1,6 @@
 import argparse
+from easydict import EasyDict as ed
+
 import os
 from pathlib import Path
 from zipfile import ZipFile
@@ -10,14 +12,17 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import StratifiedKFold, GroupKFold
 import yaml
 import pickle
-from utils import object_from_dict, get_samples
+from utils import object_from_dict, get_samples, str2bool
 from experiment import SegmentCyst
 
 from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from simplify_names import unpack_name
+from simplify_names import get_packs
+from eval import eval_model
+
+from write_results import *
 
 import wandb
 
@@ -33,9 +38,11 @@ def get_args():
 
     parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
-    parser.add_argument("--stratify_fold", nargs='?', default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
-    parser.add_argument("--tiling", nargs='?', default=False, const=True, help="If applied, uses the latest tiled-dataset available in WB.")
-    parser.add_argument('--discard_results', nargs='?', default=False, const=True, help = "Prevent Wandb to save validation result for each step.")
+    parser.add_argument("--stratify_fold", nargs='?', type=str2bool, default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
+    
+    parser.add_argument("--eval_network", nargs='?', type=str2bool, default=False, const=True, help="Performs evaluation on the defined test set.")
+    parser.add_argument("--tiling", nargs='?', type=str2bool, default=False, const=True, help="If applied, uses the latest tiled-dataset available in WB.")
+    parser.add_argument('--discard_results', nargs='?', type=str2bool, default=False, const=True, help = "Prevent Wandb to save validation result for each step.")
     
     
     return parser.parse_args()
@@ -51,11 +58,9 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
     samples = get_samples(hparams["image_path"], hparams["mask_path"])
     
     names = [file[0].stem for file in samples]
-#     for name in names:
-#         print(name)
-#         unpack = unpack_name(name)
+
 #     date, treatment, tube, zstack, side =
-    unpack = [unpack_name(name) for name in names]
+    unpack = [get_packs(name) for name in names]
     df = pd.DataFrame([])
     df["filename"] = names
     df["treatment"] = [u[1] for u in unpack]
@@ -96,12 +101,19 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
     }
 
 def main(args):
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
     os.environ["WANDB_START_METHOD"] = "fork"
     
     with open(args.config_path) as f:
         hparams = yaml.load(f, Loader=yaml.SafeLoader)
-    if args.seed: hparams["seed"] = args.seed
+    
+    if args.alternative_model:
+        with open("configs/searched_params.yaml") as f:
+            bs_results = yaml.load(f, Loader=yaml.SafeLoader)
+            if args.alternative_model in bs_results.keys():
+                hparams["train_parameters"]["batch_size"] = bs_results[args.alternative_model]["train_parameters"]["batch_size"]
+                hparams["optimizer"]["lr"] = bs_results[args.alternative_model]["optimizer"]["lr"]
+    
+            
 
     if torch.cuda.device_count() > 1:
         hparams["num_workers"] = 4
@@ -123,6 +135,8 @@ def main(args):
     print("        Running Crossvalidation        ")
     if args.tiling:
         print("         with tiled dataset        ")
+    if args.alternative_model is not None:
+        print(f"         model: {args.alternative_model}  ")
     if args.exp_tested is not None:
         print(f"           exp: {args.exp_tested}  ")
     if args.test_tube is not None:
@@ -131,22 +145,6 @@ def main(args):
     print(f"          fold: {args.kth_fold}       ")
     print("---------------------------------------\n")
     
-    if 's' in str(args.focus_size):
-        msk = 'masks_small'
-        subs = 'Small'
-        print("Dataset labels have only SMALL cysts.\n")
-    elif 'b' in str(args.focus_size):
-        msk = 'masks_big'
-        subs = 'BiG'
-        print("Dataset labels have only BIG cysts.\n")
-    else:
-        msk = 'masks'
-        subs = 'ALL'
-        
-    if args.test_tube is not None:
-        subs = 'Single_TUBES'
-    if args.tiling:
-        subs = 'tiled/' + subs
         
     if str(args.dataset) != 'nw' and not args.tiling:
         dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
@@ -159,21 +157,24 @@ def main(args):
                 zip_ref.extractall(data_dir)
 
         hparams["image_path"] = Path(data_dir) / "images"
-        hparams["mask_path"] = Path(data_dir) / msk
+        hparams["mask_path"] = Path(data_dir) / "masks"
     elif args.tiling:
         data_dir = "artifacts/tiled-dataset:v0"
         hparams["image_path"] = Path(data_dir) / "images"
-        hparams["mask_path"] = Path(data_dir) / msk
+        hparams["mask_path"] = Path(data_dir) / "masks"
     else:
         hparams["image_path"] = Path(hparams["image_path"])
         hparams["mask_path"] = Path(hparams["mask_path"])
 
     
-    if args.exp_tested:
+    if args.alternative_model is not None:
+        hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"{args.alternative_model}"
+    if args.exp_tested is not None:
         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"
+    if args.test_tube is not None:
+        hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.test_tube}"
     
-    subs = 'Comparison' 
-    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / subs / wandb.run.name
+    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
     hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
 
     checkpoint_callback = ModelCheckpoint(
@@ -195,7 +196,7 @@ def main(args):
     splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp_tested, leave_one_out=args.test_tube, strat_nogroups=args.stratify_fold)
     with (hparams["checkpoint_callback"]["filepath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
-    print(f'Saving in {hparams["checkpoint_callback"]["filepath"]}')
+    print(f'\nSaving in {hparams["checkpoint_callback"]["filepath"]}\n')
     
     model = SegmentCyst(hparams, splits, discard_res=args.discard_results, alternative_model=args.alternative_model)
 
@@ -221,6 +222,22 @@ def main(args):
     )
 
     trainer.fit(model)
+    
+    if args.eval_network:
+        eval_model(args=ed(inpath=hparams["checkpoint_callback"]["filepath"],
+                           subset='test',
+                           exp=None,
+                           thresh=.5,
+                           outpath='result'
+                          ),
+                   model=model,
+                   save_fps=True
+                  )
+        
+    
+        real_mask_PATH = hparams["mask_path"]
+        real_img_PATH = hparams["image_path"]
+        write_results(hparams["checkpoint_callback"]["filepath"]/'result'/'test')
     return
 
 

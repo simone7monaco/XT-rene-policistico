@@ -1,5 +1,7 @@
 import pickle
 import torch
+import pandas as pd
+from time import time
 from PIL import Image
 from pathlib import Path
 import argparse
@@ -31,90 +33,89 @@ def get_args():
     args = parser.parse_args()
     return args
 
-
-args = get_args()
-if args.exp:
-    exp = args.exp[-1]
-    in_PATH = Path(f"cv_perexp/exp{exp}")
-else:
-    in_PATH = args.inpath
-
-res_PATH = in_PATH / args.outpath
-res_PATH.mkdir(exist_ok=True, parents=True)
-
 device = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
-model = torch.load(next(in_PATH.glob("*.ckpt")))['hyper_parameters']['model']
 
-# {
-#     "type": "segmentation_models_pytorch.UnetPlusPlus",
-#     "encoder_name": "resnet34",
-#     "classes": 1,
-#     "encoder_weights": "imagenet",
-# }
-model = object_from_dict(model)
-model = model.to(device)
+def eval_model(args, model, save_fps=False):
+    if args.exp:
+        exp = args.exp[-1]
+        args.inpath = Path(f"cv_perexp/exp{exp}")
 
-corrections = {"model.": ""}
-state_dict = state_dict_from_disk(
-    file_path=next(in_PATH.glob("*.ckpt")),
-    rename_in_layers=corrections,
-)
-
-
-model.load_state_dict(state_dict)
-
-# transform = albu.augmentations.transforms.Normalize()
-transform = albu.augmentations.transforms.Normalize(
-    always_apply=False, max_pixel_value=255.0,
-    mean=[0.485,0.456,0.406], p=1,std=[0.229,0.224,0.225]
-)
-        
-
-
-if args.exp:
-    res_PATH = res_PATH / "test"
+    res_PATH = args.inpath / args.outpath
     res_PATH.mkdir(exist_ok=True, parents=True)
-    with Path(f"cv_perexp/exp{exp}/test_samples_oldnames.pickle").open("rb") as file:
-        samples = pickle.load(file)
-if args.subset:
-    res_PATH = res_PATH / args.subset
-    res_PATH.mkdir(exist_ok=True, parents=True)
-    with open(in_PATH / 'split_samples.pickle', 'rb') as file:
-        samples = pickle.load(file)[args.subset]
-else:
-    samples = get_samples('artifacts/dataset:v6/images', 'artifacts/dataset:v6/masks')
 
-dataset = SegmentationDataset(samples, transform, length=None)
-    
-dataloader = DataLoader(
-        dataset,
-        batch_size=4,
-        shuffle=False,
-        pin_memory=True,
-        drop_last=False,
+    transform = albu.augmentations.transforms.Normalize(
+        always_apply=False, max_pixel_value=255.0,
+        mean=[0.485,0.456,0.406], p=1,std=[0.229,0.224,0.225]
     )
 
-if not any(res_PATH.glob('*.png')):
 
-    desc = f" Test model exp {exp}" if args.exp else f" Test model ({'/'.join(str(args.inpath).split('/')[-2:])})"
-    model.eval()
-    with torch.no_grad():
-        for data in tqdm(dataloader, desc=desc):
-            x = data["features"].to(device)
-            batch_result = model(x)
-            for i in range(batch_result.shape[0]):
-                name = data["image_id"][i]
+    if args.subset:
+        res_PATH = res_PATH / args.subset
+        res_PATH.mkdir(exist_ok=True, parents=True)
+        with open(args.inpath / 'split_samples.pickle', 'rb') as file:
+            samples = pickle.load(file)[args.subset]
+    else:
+        samples = get_samples('artifacts/dataset:v6/images', 'artifacts/dataset:v6/masks')
 
-                result = batch_result[i][0]
-                result = logistic.cdf(result.cpu().numpy())
+    dataset = SegmentationDataset(samples, transform, length=None)
 
-                if args.thresh:
-                    result = (result > args.thresh).astype(np.uint8)
-                    Image.fromarray(result*255).save(res_PATH / f"{name}.png")
-                else:
-                    fig, ax = plt.subplots(figsize=(8,8))
-                    sns.heatmap(result, ax=ax, xticklabels=False, yticklabels=False, cmap='jet', cbar=False)
-                    plt.savefig(res_PATH / f"{name}.png")
+    dataloader = DataLoader(
+            dataset,
+            batch_size=4,
+            shuffle=False,
+            pin_memory=True,
+            drop_last=False,
+        )
 
-else:
-    print(f" Test for {args.inpath} already done")
+    if not any(res_PATH.glob('*.png')):
+
+        desc = f" Test model exp {exp}" if args.exp else f" Test model ({'/'.join(str(args.inpath).split('/')[-2:])})"
+        model.eval()
+        
+        timing = []
+        with torch.no_grad():
+            for data in tqdm(dataloader, desc=desc):
+                x = data["features"].to(device)
+                batch_result = model(x)
+                for i in range(batch_result.shape[0]):
+                    t0 = time()
+                    name = data["image_id"][i]
+
+                    result = batch_result[i][0]
+                    result = logistic.cdf(result.cpu().numpy())
+
+                    if args.thresh:
+                        result = (result > args.thresh).astype(np.uint8)
+                        if save_fps:
+                            timing.append([name, time()-t0])
+                        Image.fromarray(result*255).save(res_PATH / f"{name}.png")
+                    else:
+                        fig, ax = plt.subplots(figsize=(8,8))
+                        sns.heatmap(result, ax=ax, xticklabels=False, yticklabels=False, cmap='jet', cbar=False)
+                        plt.savefig(res_PATH / f"{name}.png")
+                        
+        if save_fps:
+            pd.DataFrame(timing, columns=['name', 'time']).to_csv(res_PATH / "timing.csv")
+
+    else:
+        print(f" Test for {args.inpath} already done")
+
+    
+if __name__ == '__main__':
+    args = get_args()
+    
+    model = torch.load(next(args.inpath.glob("*.ckpt")))['hyper_parameters']['model']
+
+    model = object_from_dict(model)
+    model = model.to(device)
+
+    corrections = {"model.": ""}
+    state_dict = state_dict_from_disk(
+        file_path = next(args.inpath.glob("*.ckpt")),
+        rename_in_layers=corrections,
+    )
+
+
+    model.load_state_dict(state_dict)
+
+    eval_model(args, model)

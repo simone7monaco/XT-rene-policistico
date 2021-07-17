@@ -194,7 +194,7 @@ def calc_full_sizes(mask, name, thr=10):
 
     return areas, state
 
-from simplify_names import unpack_name as get_packs
+from simplify_names import get_packs
 
 def unpack_name(name):
     try:

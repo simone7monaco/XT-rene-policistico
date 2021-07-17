@@ -60,7 +60,8 @@ class SegmentCyst(pl.LightningModule):
         elif alternative_model == 'uacanet':
             conf = ed(yaml.load(open("UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
             self.model = eval(conf.Model.name)(conf.Model)
-    
+        elif alternative_model == 'unet':
+            self.hparams["model"]["type"] = "segmentation_models_pytorch.Unet"
         else:
             self.model = object_from_dict(self.hparams["model"])
             
