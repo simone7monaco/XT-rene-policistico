@@ -16,9 +16,9 @@ filepath = os.path.split(__file__)[0]
 repopath = os.path.split(filepath)[0]
 sys.path.append(repopath)
 
-from lib import *
-from utils.dataloader import *
-from utils.utils import *
+from UACANet.lib import *
+from UACANet.utils.dataloader import *
+from UACANet.utils.utils import *
 
 def _args():
     parser = argparse.ArgumentParser()

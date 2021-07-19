@@ -1,4 +1,4 @@
-hardnet:
+ss    sshardnet:
     train_parameters:
       batch_size: 16
     optimizer:

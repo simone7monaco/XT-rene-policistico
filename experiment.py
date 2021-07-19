@@ -62,6 +62,7 @@ class SegmentCyst(pl.LightningModule):
             self.model = eval(conf.Model.name)(conf.Model)
         elif alternative_model == 'unet':
             self.hparams["model"]["type"] = "segmentation_models_pytorch.Unet"
+            self.model = object_from_dict(self.hparams["model"])
         else:
             self.model = object_from_dict(self.hparams["model"])
             

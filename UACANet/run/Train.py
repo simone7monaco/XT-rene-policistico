@@ -12,22 +12,33 @@ filepath = os.path.split(__file__)[0]
 repopath = os.path.split(filepath)[0]
 sys.path.append(repopath)
 
-from lib import *
-from utils.dataloader import *
-from utils.utils import *
+from UACANet.lib import *
+from UACANet.utils.dataloader import *
+from UACANet.utils.utils import *
 
 def _args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/xomcnet.yaml')
     return parser.parse_args()
 
-def train(opt):
+def train(opt, train_dataset=None):
     model = eval(opt.Model.name)(opt.Model).cuda()
     
-    image_root = os.path.join(opt.Train.train_path, 'images')
-    gt_root = os.path.join(opt.Train.train_path, 'masks')
+    if train_dataset is None:
+        image_root = os.path.join(opt.Train.train_path, 'images')
+        gt_root = os.path.join(opt.Train.train_path, 'masks')
 
-    train_dataset = PolypDataset(image_root, gt_root, opt.Train)
+        train_dataset = PolypDataset(image_root, gt_root, opt.Train)
+    else:
+        result = DataLoader(
+            SegmentationDataset(train_dataset, train_aug, None),
+            batch_size=opt.Train.batchsize,
+            num_workers=opt.Train.num_workers,
+            shuffle=True,
+            pin_memory=True,
+            drop_last=True,
+        )
+
     train_loader = data.DataLoader(dataset=train_dataset,
                                   batch_size=opt.Train.batchsize,
                                   shuffle=opt.Train.shuffle,
@@ -48,7 +59,7 @@ def train(opt):
         pbar = tqdm.tqdm(enumerate(train_loader, start=1), desc='Iter', total=len(train_loader), position=1, leave=False, bar_format='{desc:<5.5}{percentage:3.0f}%|{bar:40}{r_bar}')
         for i, sample in pbar:
             optimizer.zero_grad()
-            images, gts = sample['image'], sample['gt']
+            images, gts = sample["features"], sample["masks"]
             images = images.cuda()
             gts = gts.cuda()
             out = model(images, gts)
