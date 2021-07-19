@@ -2,7 +2,6 @@ import os
 import torch
 import argparse
 import yaml
-import numpy as np
 import pandas as pd
 import tqdm
 import sys
@@ -100,11 +99,11 @@ def train(opt, train_dataset=None, val_dataset=None, train_aug=None):
                 
                 pbar.set_postfix({'loss': out['loss'].item()})
         
-        if np.mean(val_iou) > best_iou:
-            best_iou = np.mean(val_iou)
+        if torch.mean(val_iou) > best_iou:
+            best_iou = torch.mean(val_iou)
             os.makedirs(opt.Train.train_save, exist_ok=True)
             torch.save(model.state_dict(), os.path.join(opt.Train.train_save, f'best_val.pth'))
-        IOUS.append([epoch, np.mean(val_iou)])
+        IOUS.append([epoch, torch.mean(val_iou).detach.numpy()])
 #         if epoch % opt.Train.checkpoint_epoch == 0:
             
 
