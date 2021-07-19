@@ -5,11 +5,11 @@ ss    sshardnet:
       lr: 0.0001
 pranet:
     train_parameters:
-      batch_size: 16
+      batch_size: 4
     optimizer:
       lr: 0.0007
 uacanet:
     train_parameters:
-      batch_size: 16
+      batch_size: 4
     optimizer:
       lr: 0.0001
