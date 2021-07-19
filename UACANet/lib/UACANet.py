@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from UACANet.lib.losses import *
+from UACANet.lib.losses.losses import *
 from UACANet.lib.modules.layers import *
 from UACANet.lib.modules.context_module import *
 from UACANet.lib.modules.attention_module import *
@@ -27,7 +27,7 @@ class UACANet(nn.Module):
         self.attention3 = UACA(opt.channel * 2, opt.channel)
         self.attention4 = UACA(opt.channel * 2, opt.channel)
 
-#         self.loss_fn = bce_iou_loss
+        self.loss_fn = bce_iou_loss
 
         self.ret = lambda x, target: F.interpolate(x, size=target.shape[-2:], mode='bilinear', align_corners=False)
         self.res = lambda x, size: F.interpolate(x, size=size, mode='bilinear', align_corners=False)
@@ -61,15 +61,15 @@ class UACANet(nn.Module):
         out2 = self.res(a2, base_size)
 
 
-#         if y is not None:
-#             loss5 = self.loss_fn(out5, y)
-#             loss4 = self.loss_fn(out4, y)
-#             loss3 = self.loss_fn(out3, y)
-#             loss2 = self.loss_fn(out2, y)
+        if y is not None:
+            loss5 = self.loss_fn(out5, y)
+            loss4 = self.loss_fn(out4, y)
+            loss3 = self.loss_fn(out3, y)
+            loss2 = self.loss_fn(out2, y)
 
-#             loss = loss2 + loss3 + loss4 + loss5
-#         else:
-#             loss = 0
+            loss = loss2 + loss3 + loss4 + loss5
+        else:
+            loss = 0
 
-#         return {'pred': out2, 'loss': loss}
-        return out2
+        return {'pred': out2, 'loss': loss}
+#         return out2

@@ -24,6 +24,7 @@ from eval import eval_model
 from UACANet.run.Train import train
 
 from write_results import *
+from albumentations.core.serialization import from_dict
 
 import wandb
 
@@ -208,11 +209,13 @@ def main(args):
     if args.alternative_model == 'uacanet':
         opt = ed(yaml.load(open('UACANet/configs/UACANet-L.yaml'), yaml.FullLoader))
         opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
-        train(opt)
+        train_aug = from_dict(hparams["train_aug"])
+        train(opt, splits['train'], splits['valid'], train_aug)
     elif args.alternative_model == 'pranet': 
         opt = ed(yaml.load(open('UACANet/configs/PraNet.yaml'), yaml.FullLoader))
         opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
-        train(opt)
+        train_aug = from_dict(hparams["train_aug"])
+        train(opt, splits['train'], splits['valid'], train_aug)
     else:
         trainer = pl.Trainer(
             gpus=1 if torch.cuda.is_available() else 0,

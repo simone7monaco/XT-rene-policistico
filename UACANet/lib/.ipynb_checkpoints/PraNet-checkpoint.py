@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-# from UACANet.lib.losses import *
+from UACANet.lib.losses.losses import *
 from UACANet.lib.modules.layers import *
 from UACANet.lib.modules.context_module import *
 from UACANet.lib.modules.attention_module import *
@@ -27,7 +27,7 @@ class PraNet(nn.Module):
         self.attention3 = reverse_attention(1024, 64, 2, 3)
         self.attention4 = reverse_attention(2048, 256, 3, 5)
 
-#         self.loss_fn = bce_iou_loss
+        self.loss_fn = bce_iou_loss
 
     def forward(self, x, y=None):
         base_size = x.shape[-2:]
@@ -58,15 +58,15 @@ class PraNet(nn.Module):
         out2 = F.interpolate(a2, size=base_size, mode='bilinear', align_corners=False)
 
 
-#         if y is not None:
-#             loss5 = self.loss_fn(out5, y)
-#             loss4 = self.loss_fn(out4, y)
-#             loss3 = self.loss_fn(out3, y)
-#             loss2 = self.loss_fn(out2, y)
-#             loss = loss2 + loss3 + loss4 + loss5
-#         else:
-#             loss = 0
+        if y is not None:
+            loss5 = self.loss_fn(out5, y)
+            loss4 = self.loss_fn(out4, y)
+            loss3 = self.loss_fn(out3, y)
+            loss2 = self.loss_fn(out2, y)
+            loss = loss2 + loss3 + loss4 + loss5
+        else:
+            loss = 0
 
-#         return {'pred': out2, 'loss': loss}
-        return out2
+        return {'pred': out2, 'loss': loss}
+#         return out2
     

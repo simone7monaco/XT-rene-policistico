@@ -77,6 +77,9 @@ def eval_model(args, model, save_fps=False):
             for data in tqdm(dataloader, desc=desc):
                 x = data["features"].to(device)
                 batch_result = model(x)
+                
+                if type(batch_result) == dict:
+                    batch_result = batch_result['pred']
                 for i in range(batch_result.shape[0]):
                     t0 = time()
                     name = data["image_id"][i]

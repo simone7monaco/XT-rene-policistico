@@ -2,6 +2,8 @@ import os
 import torch
 import argparse
 import yaml
+import numpy as np
+import pandas as pd
 import tqdm
 import sys
 
@@ -12,16 +14,20 @@ filepath = os.path.split(__file__)[0]
 repopath = os.path.split(filepath)[0]
 sys.path.append(repopath)
 
+from dataloaders import SegmentationDataset
+from torch.utils.data import DataLoader
+
 from UACANet.lib import *
 from UACANet.utils.dataloader import *
 from UACANet.utils.utils import *
+from metrics import binary_mean_iou
 
 def _args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/xomcnet.yaml')
     return parser.parse_args()
 
-def train(opt, train_dataset=None):
+def train(opt, train_dataset=None, val_dataset=None, train_aug=None):
     model = eval(opt.Model.name)(opt.Model).cuda()
     
     if train_dataset is None:
@@ -29,21 +35,31 @@ def train(opt, train_dataset=None):
         gt_root = os.path.join(opt.Train.train_path, 'masks')
 
         train_dataset = PolypDataset(image_root, gt_root, opt.Train)
+        
+        train_loader = data.DataLoader(dataset=train_dataset,
+                                  batch_size=opt.Train.batchsize,
+                                  shuffle=opt.Train.shuffle,
+                                  num_workers=opt.Train.num_workers,
+                                  pin_memory=opt.Train.pin_memory)
+        
     else:
-        result = DataLoader(
+        train_loader = DataLoader(
             SegmentationDataset(train_dataset, train_aug, None),
             batch_size=opt.Train.batchsize,
             num_workers=opt.Train.num_workers,
             shuffle=True,
             pin_memory=True,
             drop_last=True,
-        )
-
-    train_loader = data.DataLoader(dataset=train_dataset,
-                                  batch_size=opt.Train.batchsize,
-                                  shuffle=opt.Train.shuffle,
-                                  num_workers=opt.Train.num_workers,
-                                  pin_memory=opt.Train.pin_memory)
+        ) 
+        
+        val_loader = DataLoader(
+            SegmentationDataset(val_dataset, train_aug, None),
+            batch_size=opt.Train.batchsize,
+            num_workers=opt.Train.num_workers,
+            shuffle=True,
+            pin_memory=True,
+            drop_last=True,
+        ) 
 
     params = model.parameters()
     optimizer = torch.optim.Adam(params, opt.Train.lr)
@@ -54,9 +70,13 @@ def train(opt, train_dataset=None):
     model.train()
 
     print('#' * 20, 'Train prep done, start training', '#' * 20)
-
+    
+    best_iou = 0
+    IOUS = []
     for epoch in tqdm.tqdm(range(1, opt.Train.epoch + 1), desc='Epoch', total=opt.Train.epoch, position=0, bar_format='{desc:<5.5}{percentage:3.0f}%|{bar:40}{r_bar}'):
         pbar = tqdm.tqdm(enumerate(train_loader, start=1), desc='Iter', total=len(train_loader), position=1, leave=False, bar_format='{desc:<5.5}{percentage:3.0f}%|{bar:40}{r_bar}')
+        
+        vbar = tqdm.tqdm(enumerate(train_loader, start=1), desc='Valid', total=len(val_loader), position=1, leave=False, bar_format='{desc:<5.5}{percentage:3.0f}%|{bar:40}{r_bar}')
         for i, sample in pbar:
             optimizer.zero_grad()
             images, gts = sample["features"], sample["masks"]
@@ -68,13 +88,29 @@ def train(opt, train_dataset=None):
             optimizer.step()
             scheduler.step()
             pbar.set_postfix({'loss': out['loss'].item()})
-
-        os.makedirs(opt.Train.train_save, exist_ok=True)
-        if epoch % opt.Train.checkpoint_epoch == 0:
-            torch.save(model.state_dict(), os.path.join(opt.Train.train_save, 'latest.pth'))
+            
+        val_iou = []
+        for i, sample in vbar:
+            with torch.no_grad():
+                images, gts = sample["features"], sample["masks"]
+                images = images.cuda()
+                gts = gts.cuda()
+                out = model(images, gts)
+                val_iou.append(binary_mean_iou(out['pred'], gts))
+                
+                pbar.set_postfix({'loss': out['loss'].item()})
+        
+        if np.mean(val_iou) > best_iou:
+            best_iou = np.mean(val_iou)
+            os.makedirs(opt.Train.train_save, exist_ok=True)
+            torch.save(model.state_dict(), os.path.join(opt.Train.train_save, f'best_val.pth'))
+        IOUS.append([epoch, np.mean(val_iou)])
+#         if epoch % opt.Train.checkpoint_epoch == 0:
+            
 
     print('#' * 20, 'Train done', '#' * 20)
-
+    pd.DataFrame(IOUS).to_csv(opt.Train.train_save / "perf.csv")
+    
 if __name__ == '__main__':
     args = _args()
     opt = ed(yaml.load(open(args.config), yaml.FullLoader))
