@@ -51,8 +51,11 @@ class SegmentCyst(pl.LightningModule):
         if alternative_model == 'colonsegnet':
             self.model = CompNet()
         elif alternative_model == 'pranet':
-            conf = ed(yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader))
+            conf = yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader)
+            self.hparams["model"] = conf["Model"]
+            conf = ed(conf)
             self.model = eval(conf.Model.name)(conf.Model)
+            
         elif alternative_model == 'hardnet':
             self.model = HarDMSEG()
         elif alternative_model == 'pspnet':
@@ -163,6 +166,16 @@ class SegmentCyst(pl.LightningModule):
         masks = batch["masks"]
 
         logits = self.forward(features)
+        
+        if type(logits) == dict:
+#             total_loss = torch.Tensor(logits['loss']).cuda()
+            logits = logits['pred']
+#         else:
+        total_loss = 0
+        for loss_name, weight, loss in self.losses:
+            ls_mask = loss(logits, masks)
+            total_loss += weight * ls_mask
+            self.log(f"train_mask_{loss_name}", ls_mask)
 
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
@@ -192,15 +205,6 @@ class SegmentCyst(pl.LightningModule):
 
         # print(logits.shape, features.shape)
 
-        if self.bce:
-            total_loss = self.loss(logits, masks)
-        else:
-            total_loss = 0
-            for loss_name, weight, loss in self.losses:
-                ls_mask = loss(logits, masks)
-                total_loss += weight * ls_mask
-                self.log(f"train_mask_{loss_name}", ls_mask)
-
         self.log("train_loss", total_loss)
 
         self.log("lr", self._get_current_lr())
@@ -216,17 +220,19 @@ class SegmentCyst(pl.LightningModule):
         features = batch["features"]
         masks = batch["masks"]
 
-        logits = self.forward(features)
-        logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
-        
         result = {}
-
-        if self.bce:
-            total_loss = self.loss(logits, masks)
-            self.log('val_loss', total_loss)
-        else:    
+        logits = self.forward(features)
+        if type(logits) == dict:
+            result["valid_loss"] = torch.Tensor(logits['loss']).cuda()
+            logits = logits['pred']
+        else:
             for loss_name, weight, loss in self.losses:
                 result[f"valid_mask_{loss_name}"] = loss(logits, masks)
+            
+        logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
+
+        
+            
 
         result["val_iou"] = binary_mean_iou(logits, masks)
         

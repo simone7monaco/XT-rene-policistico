@@ -10,6 +10,10 @@ from torch.utils.data import DataLoader
 import albumentations as albu
 from tqdm import tqdm
 from scipy.stats import logistic
+
+from HarDNetMSEG.lib.HarDMSEG import HarDMSEG
+import segmentation_models_pytorch as smp
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -55,7 +59,7 @@ def eval_model(args, model, save_fps=False):
         with open(args.inpath / 'split_samples.pickle', 'rb') as file:
             samples = pickle.load(file)[args.subset]
     else:
-        samples = get_samples('artifacts/dataset:v6/images', 'artifacts/dataset:v6/masks')
+        samples = get_samples('artifacts/dataset:v7/images', 'artifacts/dataset:v7/masks')
 
     dataset = SegmentationDataset(samples, transform, length=None)
 
@@ -108,17 +112,25 @@ if __name__ == '__main__':
     args = get_args()
     
     model = torch.load(next(args.inpath.glob("*.ckpt")))['hyper_parameters']['model']
-
     model = object_from_dict(model)
+    
+#     model = HarDMSEG()
+    model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
     model = model.to(device)
 
+    checkpoint = torch.load(next(args.inpath.glob("*.ckpt")), map_location=lambda storage, loc: storage)
+    
     corrections = {"model.": ""}
     state_dict = state_dict_from_disk(
         file_path = next(args.inpath.glob("*.ckpt")),
         rename_in_layers=corrections,
     )
 
-
+#     print(model.__name__)
+#     print(list(state_dict.keys())[:5])
+#     print(list(model.state_dict().keys())[:5])
+#     yay
+    
     model.load_state_dict(state_dict)
 
     eval_model(args, model)

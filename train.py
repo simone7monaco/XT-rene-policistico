@@ -128,13 +128,13 @@ earlystopping_callback = EarlyStopping(
     )
 
 logger = WandbLogger()
-# logger.log_hyperparams(hparams)
+logger.log_hyperparams(hparams)
 logger.watch(model, log='all', log_freq=1)
 
 trainer = pl.Trainer(
     gpus=1 if torch.cuda.is_available() else 0,
 #     accumulate_grad_batches=4,
-    max_epochs=100,
+    max_epochs=1,
 #     distributed_backend="ddp",  # DistributedDataParallel
     progress_bar_refresh_rate=1,
     benchmark=True,
@@ -152,4 +152,4 @@ trainer = pl.Trainer(
 trainer.fit(model)
 
 model.logger.experiment.log({"max_val_iou": model.max_val_iou})
-wandb.save(checkpoint_callback.best_model_path)
+# wandb.save(checkpoint_callback.best_model_path)

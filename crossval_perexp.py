@@ -206,17 +206,17 @@ def main(args):
     logger.log_hyperparams(hparams)
     logger.watch(model, log='all', log_freq=1)
 
-    if args.alternative_model == 'uacanet':
-        opt = ed(yaml.load(open('UACANet/configs/UACANet-L.yaml'), yaml.FullLoader))
-        opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
-        train_aug = from_dict(hparams["train_aug"])
-        train(opt, splits['train'], splits['valid'], train_aug)
-    elif args.alternative_model == 'pranet': 
-        opt = ed(yaml.load(open('UACANet/configs/PraNet.yaml'), yaml.FullLoader))
-        opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
-        train_aug = from_dict(hparams["train_aug"])
-        train(opt, splits['train'], splits['valid'], train_aug)
-    else:
+#     if args.alternative_model == 'uacanet':
+#         opt = ed(yaml.load(open('UACANet/configs/UACANet-L.yaml'), yaml.FullLoader))
+#         opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
+#         train_aug = from_dict(hparams["train_aug"])
+#         train(opt, splits['train'], splits['valid'], train_aug)
+#     elif args.alternative_model == 'pranet':
+#         opt = ed(yaml.load(open('UACANet/configs/PraNet.yaml'), yaml.FullLoader))
+#         opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
+#         train_aug = from_dict(hparams["train_aug"])
+#         train(opt, splits['train'], splits['valid'], train_aug)
+    if True:
         trainer = pl.Trainer(
             gpus=1 if torch.cuda.is_available() else 0,
         #     accumulate_grad_batches=4,

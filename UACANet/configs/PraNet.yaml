@@ -1,5 +1,6 @@
 Model:
     name: "PraNet"
+    type: "UACANet.lib.PraNet.PraNet"
     channel: 32
     output_stride: 32
     pretrained: True
