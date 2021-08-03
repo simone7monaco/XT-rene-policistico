@@ -48,6 +48,7 @@ class SegmentCyst(pl.LightningModule):
         self.val_images =  Path(self.hparams["checkpoint_callback"]["filepath"]) / "images/valid_predictions"
         self.val_images.mkdir(exist_ok=True, parents=True)
         
+        self.model_name = alternative_model
         if alternative_model == 'colonsegnet':
             self.model = CompNet()
         elif alternative_model == 'pranet':
@@ -90,8 +91,11 @@ class SegmentCyst(pl.LightningModule):
         self.val_samples=splits['valid']
         self.max_val_iou = 0
 
-    def forward(self, batch: torch.Tensor) -> torch.Tensor:  # type: ignore
-        return self.model(batch)
+    def forward(self, batch: torch.Tensor, masks: torch.Tensor=None) -> torch.Tensor:
+        if masks is not None:
+            return self.model(batch, masks)
+        else:
+            return self.model(batch)
 
     def setup(self, stage=0):
         if self.train_samples is None:
@@ -165,17 +169,17 @@ class SegmentCyst(pl.LightningModule):
         features = batch["features"]
         masks = batch["masks"]
 
-        logits = self.forward(features)
-        
-        if type(logits) == dict:
-#             total_loss = torch.Tensor(logits['loss']).cuda()
+        if self.model_name in ['uacanet', 'pranet']:
+            logits = self.forward(features, masks)
+            total_loss = logits['loss']
             logits = logits['pred']
-#         else:
-        total_loss = 0
-        for loss_name, weight, loss in self.losses:
-            ls_mask = loss(logits, masks)
-            total_loss += weight * ls_mask
-            self.log(f"train_mask_{loss_name}", ls_mask)
+        else:
+            logits = self.forward(features)
+            total_loss = 0
+            for loss_name, weight, loss in self.losses:
+                ls_mask = loss(logits, masks)
+                total_loss += weight * ls_mask
+                self.log(f"train_mask_{loss_name}", ls_mask)
 
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
@@ -221,11 +225,13 @@ class SegmentCyst(pl.LightningModule):
         masks = batch["masks"]
 
         result = {}
-        logits = self.forward(features)
-        if type(logits) == dict:
-            result["valid_loss"] = torch.Tensor(logits['loss']).cuda()
+        
+        if self.model_name in ['uacanet', 'pranet']:
+            logits = self.forward(features, masks)
+            result["valid_loss"] = logits['loss']
             logits = logits['pred']
         else:
+            logits = self.forward(features)
             for loss_name, weight, loss in self.losses:
                 result[f"valid_mask_{loss_name}"] = loss(logits, masks)
             
