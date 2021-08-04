@@ -63,7 +63,7 @@ def get_model(alternative_model, hparams):
     else:
         model = object_from_dict(self.hparams["model"])
 
-    hparams["model"]["type"] = type(model)
+    hparams["model"]["type"] = str(model.__class__).split("'")[1]
     return model
     
 
