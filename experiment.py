@@ -37,10 +37,43 @@ import wandb
 import numpy as np
 import os
 
+def get_model(alternative_model, hparams):
+    if alternative_model == 'colonsegnet':
+        model = CompNet()
+    elif alternative_model == 'pranet':
+        conf = yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader)
+        self.hparams["model"] = conf["Model"]
+        conf = ed(conf)
+        model = eval(conf.Model.name)(conf.Model)
+
+    elif alternative_model == 'hardnet':
+        model = HarDMSEG()
+
+    elif alternative_model == 'pspnet':
+        model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
+
+    elif alternative_model == 'uacanet':
+        conf = ed(yaml.load(open("UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
+        model = eval(conf.Model.name)(conf.Model)
+
+    elif alternative_model == 'unet':
+        hparams["model"]["type"] = "segmentation_models_pytorch.Unet"
+        model = object_from_dict(self.hparams["model"])
+
+    else:
+        model = object_from_dict(self.hparams["model"])
+
+    hparams["model"]["type"] = type(model)
+    return model
+    
 
 class SegmentCyst(pl.LightningModule):
     def __init__(self, hparams, splits=[None, None], discard_res=False, alternative_model=None):
         super().__init__()
+        
+        self.model_name = alternative_model
+        self.model = get_model(alternative_model, hparams)
+        
         self.discard_res = discard_res
         self.hparams = hparams
         self.train_images = Path(self.hparams["checkpoint_callback"]["filepath"]) / "images/train_predictions"
@@ -48,27 +81,6 @@ class SegmentCyst(pl.LightningModule):
         self.val_images =  Path(self.hparams["checkpoint_callback"]["filepath"]) / "images/valid_predictions"
         self.val_images.mkdir(exist_ok=True, parents=True)
         
-        self.model_name = alternative_model
-        if alternative_model == 'colonsegnet':
-            self.model = CompNet()
-        elif alternative_model == 'pranet':
-            conf = yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader)
-            self.hparams["model"] = conf["Model"]
-            conf = ed(conf)
-            self.model = eval(conf.Model.name)(conf.Model)
-            
-        elif alternative_model == 'hardnet':
-            self.model = HarDMSEG()
-        elif alternative_model == 'pspnet':
-            self.model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
-        elif alternative_model == 'uacanet':
-            conf = ed(yaml.load(open("UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
-            self.model = eval(conf.Model.name)(conf.Model)
-        elif alternative_model == 'unet':
-            self.hparams["model"]["type"] = "segmentation_models_pytorch.Unet"
-            self.model = object_from_dict(self.hparams["model"])
-        else:
-            self.model = object_from_dict(self.hparams["model"])
             
             
         if "resume_from_checkpoint" in self.hparams:

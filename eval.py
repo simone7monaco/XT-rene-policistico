@@ -115,7 +115,7 @@ if __name__ == '__main__':
     model = object_from_dict(model)
     
 #     model = HarDMSEG()
-    model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
+#     model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
     model = model.to(device)
 
     checkpoint = torch.load(next(args.inpath.glob("*.ckpt")), map_location=lambda storage, loc: storage)
