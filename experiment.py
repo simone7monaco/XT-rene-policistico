@@ -41,9 +41,7 @@ def get_model(alternative_model, hparams):
     if alternative_model == 'colonsegnet':
         model = CompNet()
     elif alternative_model == 'pranet':
-        conf = yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader)
-        self.hparams["model"] = conf["Model"]
-        conf = ed(conf)
+        conf = ed(yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader))
         model = eval(conf.Model.name)(conf.Model)
 
     elif alternative_model == 'hardnet':
