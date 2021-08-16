@@ -56,10 +56,10 @@ def get_model(alternative_model, hparams):
 
     elif alternative_model == 'unet':
         hparams["model"]["type"] = "segmentation_models_pytorch.Unet"
-        model = object_from_dict(self.hparams["model"])
+        model = object_from_dict(hparams["model"])
 
     else:
-        model = object_from_dict(self.hparams["model"])
+        model = object_from_dict(hparams["model"])
 
     hparams["model"]["type"] = str(model.__class__).split("'")[1]
     return model
