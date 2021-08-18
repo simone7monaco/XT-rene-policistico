@@ -37,11 +37,12 @@ import wandb
 import numpy as np
 import os
 
+
 def get_model(alternative_model, hparams):
     if alternative_model == 'colonsegnet':
         model = CompNet()
     elif alternative_model == 'pranet':
-        conf = ed(yaml.load(open("UACANet/configs/PraNet.yaml"), yaml.FullLoader))
+        conf = ed(yaml.load(open(Path.home() / "my_rene-policistico/UACANet/configs/PraNet.yaml"), yaml.FullLoader))
         model = eval(conf.Model.name)(conf.Model)
 
     elif alternative_model == 'hardnet':
@@ -51,7 +52,7 @@ def get_model(alternative_model, hparams):
         model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
 
     elif alternative_model == 'uacanet':
-        conf = ed(yaml.load(open("UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
+        conf = ed(yaml.load(open(Path.home() / "my_rene-policistico/UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
         model = eval(conf.Model.name)(conf.Model)
 
     elif alternative_model == 'unet':
