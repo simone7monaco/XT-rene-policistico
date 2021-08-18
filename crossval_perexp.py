@@ -104,6 +104,7 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
 
 def main(args):
     os.environ["WANDB_START_METHOD"] = "fork"
+    torch.cuda.empty_cache()
     
     with open(args.config_path) as f:
         hparams = yaml.load(f, Loader=yaml.SafeLoader)
