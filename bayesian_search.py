@@ -7,8 +7,8 @@ import numpy as np
 from train import train
 
 import matplotlib.pyplot as plt
-import skopt.plots
-import neptunecontrib.monitoring.skopt as sk_utils
+# import skopt.plots
+# import neptunecontrib.monitoring.skopt as sk_utils
 
 from ray import tune
 from ray.tune.suggest.hyperopt import HyperOptSearch
@@ -29,9 +29,10 @@ def single_train(config):
     
     return result
 
+model = "unetplusplus"
 parameters = {
         "config_path": Path.home() / "my_rene-policistico/configs/baseline.yaml",
-        "alternative_model": "unetpp",
+        "alternative_model": model,
         "lr": tune.uniform(1e-6, 1e-2),
         "batch_size": tune.choice([4, 8, 16, 32]),
         "acc_grad": tune.choice([1, 2, 4, 8, 16]),
@@ -40,8 +41,8 @@ parameters = {
         "b_search": True,
         "dataset": "latest",
         "wandb": {
-            "project": "comparison", 
-            "entity": "rene-policistico",
+            "project": "bsearch", 
+            "entity": "smonaco",
         }
 }
 
@@ -54,8 +55,10 @@ sha_schedular = AsyncHyperBandScheduler(metric="is_score",
 analysis = tune.run(
     train,
     search_alg = hyperopt_alg, # Specify the search algorithm
-#     resources_per_trial={'gpu': 1},
+    resources_per_trial={'gpu': 1},
     num_samples=15,
     config=parameters,
     verbose=2
     )
+
+analysis.dataframe().to_csv(f"resulting_bayes-{model}.csv")
