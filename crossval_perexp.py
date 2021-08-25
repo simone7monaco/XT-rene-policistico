@@ -104,7 +104,7 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
 
 def main(args):
     os.environ["WANDB_START_METHOD"] = "fork"
-    os.environ["WANDB_RUN_GROUP"] = "loto_cv"
+    os.environ["WANDB_RUN_GROUP"] = "loto_cv_newdf"
     torch.cuda.empty_cache()
     
     with open(args.config_path) as f:
@@ -126,13 +126,13 @@ def main(args):
 
 #     name = f"crossval_exp{exp}"
     if args.test_tube is not None:
-        name = f"test_tube_{args.test_tube}_seed_{args.seed}"
+        name = f"test_tube_{args.test_tube}_seed_{args.seed}_model_{args.alternative_model}"
     else:
         name = f"fold_{args.kth_fold}_seed_{args.seed}"
     wandb.login()
 
-    name = None
-    run = wandb.init(project="upp", entity="smonaco", name=name)
+#     name = None
+    run = wandb.init(project="comparison", entity="smonaco", name=name)
     
     
     print("---------------------------------------")
