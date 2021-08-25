@@ -104,6 +104,7 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
 
 def main(args):
     os.environ["WANDB_START_METHOD"] = "fork"
+    os.environ["WANDB_RUN_GROUP"] = "loto_cv"
     torch.cuda.empty_cache()
     
     with open(args.config_path) as f:
