@@ -51,7 +51,7 @@ def get_args():
 
 
 def date_to_exp(date):
-    date_exps = {'0919': 1, '1019': 2, '072020':3, '092020':3, '122020':4}
+    date_exps = {'0919': 1, '1019': 2, '072020':3, '092020':3, '122020':4, '0721':5}
     date = ''.join((date).split('.')[1:])
     return date_exps[date]
 
@@ -104,7 +104,7 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
 
 def main(args):
     os.environ["WANDB_START_METHOD"] = "fork"
-    os.environ["WANDB_RUN_GROUP"] = "loto_cv_newdf"
+#     os.environ["WANDB_RUN_GROUP"] = "loto_cv_newdf"
     torch.cuda.empty_cache()
     
     with open(args.config_path) as f:
@@ -132,7 +132,7 @@ def main(args):
     wandb.login()
 
 #     name = None
-    run = wandb.init(project="comparison", entity="smonaco", name=name)
+    run = wandb.init(project="comparison", entity="smonaco", name=name, tags=["loto_cv_newdf"])
     
     
     print("---------------------------------------")
@@ -171,12 +171,12 @@ def main(args):
         hparams["mask_path"] = Path(hparams["mask_path"])
 
     
-    if args.alternative_model is not None:
-        hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"{args.alternative_model}"
-    if args.exp_tested is not None:
-        hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"
-    if args.test_tube is not None:
-        hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.test_tube}"
+#     if args.alternative_model is not None:
+#         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"{args.alternative_model}"
+#     if args.exp_tested is not None:
+#         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"
+#     if args.test_tube is not None:
+#         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.test_tube}"
     
     hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
     hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
