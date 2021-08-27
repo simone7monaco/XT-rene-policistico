@@ -5,6 +5,7 @@
 from pathlib import Path
 import numpy as np
 from train import train
+import pickle
 
 import matplotlib.pyplot as plt
 # import skopt.plots
@@ -56,9 +57,13 @@ analysis = tune.run(
     train,
     search_alg = hyperopt_alg, # Specify the search algorithm
     resources_per_trial={'gpu': 1},
-    num_samples=15,
+    num_samples=25,
     config=parameters,
     verbose=2
     )
 
+# analysis = ExperimentAnalysis(experiment_checkpoint_path=f"resulting_bayes-{model}.json")
+with open(f"resulting_bayes-{model}.pickle", "wb") as f:
+    pickle.dump(analysis.trial_dataframes, f)
+    
 analysis.dataframe().to_csv(f"resulting_bayes-{model}.csv")
