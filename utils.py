@@ -1,11 +1,33 @@
 import argparse
+import torch
 from pathlib import Path
 from typing import Union, Dict, List, Tuple
 import cv2
 
+
 def get_id2_file_paths(path: Union[str, Path]) -> Dict[str, Path]:
     return {x.stem: x for x in Path(path).glob("*.*")}
 
+
+def mem_values(mem):
+    keys = iter(["B", "kB", "MiB", "GiB"])
+    
+    mem = float(mem)
+    while mem/1024 >= 1:
+        mem /= 1024
+        next(keys)
+        
+    return f"{mem:.3} {next(keys)}"
+
+
+def print_usage():
+    t = torch.cuda.get_device_properties(0).total_memory
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    f = r-a  # free inside reserved
+    print(f"\n[DEBUG]> Cuda free memory: {mem_values(f)} / {mem_values(r)} (out of a total of {mem_values(t)})\n")
+    
+    
 def str2bool(v):
     if isinstance(v, bool):
         return v

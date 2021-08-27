@@ -8,14 +8,13 @@ from torch import nn
 
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import object_from_dict
+from utils import object_from_dict, print_usage, find_average, state_dict_from_disk, get_samples
 import torchvision.utils as vutils
 # from Models.networks.network import Comprehensive_Atten_Unet
 
 
 from dataloaders import SegmentationDataset
 from metrics import binary_mean_iou
-from utils import get_samples
 
 import segmentation_models_pytorch as smp
 # from ColonSegNet import CompNet
@@ -27,7 +26,6 @@ from UACANet.utils import *
 from UACANet.lib import *
 from UACANet.lib.losses import *
 
-from utils import find_average, state_dict_from_disk
 from albumentations.core.serialization import from_dict
 from typing import Dict
 import torchvision.transforms.functional as TF
@@ -67,9 +65,10 @@ def get_model(alternative_model, hparams):
     
 
 class SegmentCyst(pl.LightningModule):
-    def __init__(self, hparams, splits=[None, None], discard_res=False, alternative_model=None):
+    def __init__(self, hparams, splits=[None, None], discard_res=False, alternative_model=None, debug=None):
         super().__init__()
         
+        self.debug = debug
         self.model_name = alternative_model
         self.model = get_model(alternative_model, hparams)
         
@@ -115,6 +114,7 @@ class SegmentCyst(pl.LightningModule):
             self.train_samples = samples[:num_train]
             self.val_samples = samples[num_train:]
 
+        if self.debug: print_usage()
         print("Len train samples = ", len(self.train_samples))
         print("Len val samples = ", len(self.val_samples))
 
@@ -134,7 +134,8 @@ class SegmentCyst(pl.LightningModule):
             pin_memory=True,
             drop_last=True,
         )
-
+        
+        if self.debug: print_usage()
         print("Train dataloader = ", len(result))
         return result
 
@@ -177,9 +178,11 @@ class SegmentCyst(pl.LightningModule):
     
     
     def training_step(self, batch, batch_idx):
+        if self.debug: print_usage()
         features = batch["features"]
         masks = batch["masks"]
-
+                
+        if self.debug: print_usage()
         if self.model_name in ['uacanet', 'pranet']:
             logits = self.forward(features, masks)
             total_loss = logits['loss']
@@ -191,7 +194,8 @@ class SegmentCyst(pl.LightningModule):
                 ls_mask = loss(logits, masks)
                 total_loss += weight * ls_mask
                 self.log(f"train_mask_{loss_name}", ls_mask)
-
+        
+        if self.debug: print(f"3- {print_usage()}")
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
 #         batch_size = self.hparams["train_parameters"]["batch_size"]
@@ -234,6 +238,8 @@ class SegmentCyst(pl.LightningModule):
     def validation_step(self, batch, batch_id):
         features = batch["features"]
         masks = batch["masks"]
+        
+        if self.debug: print_usage()
 
         result = {}
         
@@ -248,8 +254,7 @@ class SegmentCyst(pl.LightningModule):
             
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
-        
-            
+        if self.debug: print_usage()
 
         result["val_iou"] = binary_mean_iou(logits, masks)
         

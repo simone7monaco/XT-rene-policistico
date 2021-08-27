@@ -25,7 +25,7 @@ scheduler_types = {
 
 def get_sweep(hparams, args):
     if hasattr(args, "batch_size") and args.batch_size:
-        hparams["batch_size"] = args.batch_size
+        hparams["train_parameters"]["batch_size"] = args.batch_size
     
     if hasattr(args, "optimizer") and args.optimizer:
         hparams["optimizer"]["type"] = optimizer_types[args.optimizer]

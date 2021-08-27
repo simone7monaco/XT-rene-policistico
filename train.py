@@ -6,7 +6,7 @@ import yaml
 from easydict import EasyDict as ed
 import ast
 
-from utils import object_from_dict, str2bool
+from utils import object_from_dict, str2bool, print_usage
 from experiment import SegmentCyst
 from sweep_params import get_sweep
 from crossval_perexp import split_dataset
@@ -25,6 +25,8 @@ from ray import tune
 
 def get_args():
     parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--debug', type=str2bool, help="Print memory usage in different steps", nargs='?', const=True, default=False)
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
     parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the config file. Default is 'latest'.", default='latest')
     
@@ -67,7 +69,8 @@ def train(config):
         if getattr(config, v):
             print(f"           {v}: {getattr(config, v)}  ")
     print("---------------------------------------\n")
-
+    
+    if args.debug: print_usage()
     wandb.login()
     run = wandb.init(project="ca-net", entity="rene-policistico", config=hparams, settings=wandb.Settings(start_method='fork'))
 
@@ -88,8 +91,9 @@ def train(config):
         hparams["mask_path"] = Path(hparams["mask_path"])
 
     splits = split_dataset(hparams)
-    model = SegmentCyst(hparams, splits, alternative_model=config.alternative_model)
-
+    model = SegmentCyst(hparams, splits, alternative_model=config.alternative_model, debug=args.debug)
+    
+    if args.debug: print_usage()
 
     if "activate_attention_layers" in dir(model.model):
         if config.active_attention_layers:
@@ -148,7 +152,9 @@ def train(config):
         logger=logger,
     #     resume_from_checkpoint="cyst_checkpoints/prova1/epoch=20-step=8546.ckpt"
     )
-
+    
+    if args.debug: print_usage()
+        
     trainer.fit(model)
 
     if config.b_search:
