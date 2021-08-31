@@ -73,8 +73,8 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
     
     if test_exp is not None or leave_one_out is not None:
         if leave_one_out is not None:
-            tubes = df[['exp','tube']].astype(int).sort_values(by=['exp', 'tube']).drop_duplicates().reset_index().values[leave_one_out]
-            test_idx = df[(df.exp == tubes[1])&(df.tube == str(tubes[2]))].index
+            tubes = df[['exp','tube']].astype(int).sort_values(by=['exp', 'tube']).drop_duplicates().reset_index(drop=True).xs(leave_one_out)
+            test_idx = df[(df.exp == tubes.exp)&(df.tube == str(tubes.tube))].index
             
         else:
             test_idx = df[df.exp == test_exp].index
