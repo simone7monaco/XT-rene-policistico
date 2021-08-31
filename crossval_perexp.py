@@ -17,8 +17,6 @@ from experiment import SegmentCyst
 
 from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from simplify_names import get_packs
 from eval import eval_model
 from UACANet.run.Train import train
@@ -132,7 +130,7 @@ def main(args):
     wandb.login()
 
 #     name = None
-    run = wandb.init(project="comparison", entity="smonaco", name=name, tags=["loto_cv_newdf"])
+    run = wandb.init(project="comparison", entity="smonaco", name=name, tags=["loto_cv_with5"])
     
     
     print("---------------------------------------")
@@ -172,35 +170,24 @@ def main(args):
 
     
 #     if args.alternative_model is not None:
-#         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"{args.alternative_model}"
+#         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"{args.alternative_model}"
 #     if args.exp_tested is not None:
-#         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.exp_tested}"
+#         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"exp_{args.exp_tested}"
 #     if args.test_tube is not None:
-#         hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / f"exp_{args.test_tube}"
+#         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"exp_{args.test_tube}"
     
-    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
-    hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
+    hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
+    hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
 
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=hparams["checkpoint_callback"]["filepath"],
-        monitor="val_iou",
-        verbose=True,
-        mode="max",
-        save_top_k=1,
-    )
+    checkpoint_callback = object_from_dict(hparams["checkpoint_callback"])
 
-    earlystopping_callback = EarlyStopping(
-        monitor='val_iou',
-        min_delta=0.001,
-        patience=10,
-        verbose=True,
-        mode='max',
-    )
+    earlystopping_callback = object_from_dict(hparams["earlystopping_callback"])
     
     splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp_tested, leave_one_out=args.test_tube, strat_nogroups=args.stratify_fold)
-    with (hparams["checkpoint_callback"]["filepath"] / "split_samples.pickle").open('wb') as file:
+    
+    with (hparams["checkpoint_callback"]["dirpath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
-    print(f'\nSaving in {hparams["checkpoint_callback"]["filepath"]}\n')
+    print(f'\nSaving in {hparams["checkpoint_callback"]["dirpath"]}\n')
     
     model = SegmentCyst(hparams, splits, discard_res=args.discard_results, alternative_model=args.alternative_model)
 
@@ -210,12 +197,12 @@ def main(args):
 
 #     if args.alternative_model == 'uacanet':
 #         opt = ed(yaml.load(open('UACANet/configs/UACANet-L.yaml'), yaml.FullLoader))
-#         opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
+#         opt.Train.train_save = hparams["checkpoint_callback"]["dirpath"]
 #         train_aug = from_dict(hparams["train_aug"])
 #         train(opt, splits['train'], splits['valid'], train_aug)
 #     elif args.alternative_model == 'pranet':
 #         opt = ed(yaml.load(open('UACANet/configs/PraNet.yaml'), yaml.FullLoader))
-#         opt.Train.train_save = hparams["checkpoint_callback"]["filepath"]
+#         opt.Train.train_save = hparams["checkpoint_callback"]["dirpath"]
 #         train_aug = from_dict(hparams["train_aug"])
 #         train(opt, splits['train'], splits['valid'], train_aug)
     if True:
@@ -242,7 +229,7 @@ def main(args):
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         model = model.to(device)
         model.model = model.model.to(device)
-        eval_model(args=ed(inpath=hparams["checkpoint_callback"]["filepath"],
+        eval_model(args=ed(inpath=hparams["checkpoint_callback"]["dirpath"],
                            subset='test',
                            exp=None,
                            thresh=.5,
@@ -255,7 +242,7 @@ def main(args):
     
         real_mask_PATH = hparams["mask_path"]
         real_img_PATH = hparams["image_path"]
-        write_results(hparams["checkpoint_callback"]["filepath"]/'result'/'test')
+        write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test')
     return
 
 

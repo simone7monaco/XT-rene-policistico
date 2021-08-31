@@ -25,11 +25,19 @@ train_parameters:
 
 checkpoint_callback:
   type: pytorch_lightning.callbacks.ModelCheckpoint
-  filepath: "./cyst_checkpoints/Mod_Comparison"
-  monitor: val_iou
+  dirpath: "./cyst_checkpoints/Mod_Comparison"
+  monitor: valid_loss
   verbose: True
-  mode: max
+  mode: min
   save_top_k: 1
+  
+earlystopping_callback:
+  type: pytorch_lightning.callbacks.early_stopping.EarlyStopping
+  monitor: valid_loss
+  min_delta: 0.001
+  patience: 10
+  verbose: True
+  mode: min
 
 val_parameters:
   batch_size: 2

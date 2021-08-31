@@ -74,9 +74,9 @@ class SegmentCyst(pl.LightningModule):
         
         self.discard_res = discard_res
         self.hparams = hparams
-        self.train_images = Path(self.hparams["checkpoint_callback"]["filepath"]) / "images/train_predictions"
+        self.train_images = Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/train_predictions"
         self.train_images.mkdir(exist_ok=True, parents=True)
-        self.val_images =  Path(self.hparams["checkpoint_callback"]["filepath"]) / "images/valid_predictions"
+        self.val_images =  Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/valid_predictions"
         self.val_images.mkdir(exist_ok=True, parents=True)
         
             
@@ -243,14 +243,19 @@ class SegmentCyst(pl.LightningModule):
 
         result = {}
         
+        
+        
         if self.model_name in ['uacanet', 'pranet']:
             logits = self.forward(features, masks)
             result["valid_loss"] = logits['loss']
             logits = logits['pred']
         else:
             logits = self.forward(features)
+            total_loss = 0
             for loss_name, weight, loss in self.losses:
-                result[f"valid_mask_{loss_name}"] = loss(logits, masks)
+                ls_mask = loss(logits, masks)
+                total_loss += weight * ls_mask
+            result["valid_loss"] = total_loss
             
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 

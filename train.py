@@ -110,26 +110,16 @@ def train(config):
         print(f"> Activating attention layers {active_attention_layers}")
         model.model.activate_attention_layers(active_attention_layers)
 
-    # hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / wandb.run.name
-    hparams["checkpoint_callback"]["filepath"] = Path(hparams["checkpoint_callback"]["filepath"]) / "Search" / wandb.run.name
-    hparams["checkpoint_callback"]["filepath"].mkdir(exist_ok=True, parents=True)
+    # hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
+    hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / "Search" / wandb.run.name
+    hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
 
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=hparams["checkpoint_callback"]["filepath"],
-        monitor="val_iou",
-        verbose=True,
-        mode="max",
-        save_top_k=1,
-    )
-    print(f'\nSaving in {hparams["checkpoint_callback"]["filepath"]}\n')
+    
+    checkpoint_callback = object_from_dict(hparams["checkpoint_callback"])
 
-    earlystopping_callback = EarlyStopping(
-            monitor='val_iou',
-            min_delta=0.001,
-            patience=10,
-            verbose=True,
-            mode='max',
-        )
+    earlystopping_callback = object_from_dict(hparams["earlystopping_callback"])
+    
+    print(f'\nSaving in {hparams["checkpoint_callback"]["dirpath"]}\n')
 
     logger = WandbLogger()
     logger.log_hyperparams(hparams)
