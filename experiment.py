@@ -281,6 +281,7 @@ class SegmentCyst(pl.LightningModule):
                 )
                 self.logger.experiment.log({"valid_images": [mask_img]}, commit=False)
             
+        self.log("valid_loss", result["valid_loss"])
         self.log("val_iou", result["val_iou"])
         return result
 
