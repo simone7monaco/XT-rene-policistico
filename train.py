@@ -116,6 +116,7 @@ def train(config):
 
     
     checkpoint_callback = object_from_dict(hparams["checkpoint_callback"])
+    if any(hparams["checkpoint_callback"]["dirpath"].iterdir()): return
 
     earlystopping_callback = object_from_dict(hparams["earlystopping_callback"])
     
