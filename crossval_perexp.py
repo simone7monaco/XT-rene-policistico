@@ -29,7 +29,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
-    parser.add_argument("-d", "--dataset", type=Path, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='latest')
+    parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='latest')
     parser.add_argument("-e", "--exp_tested", default=None, type=int, help="Experiment to put in test set")
     parser.add_argument("-t", "--test_tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
     parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels (only avaiable from 'v6' dataset).")
@@ -130,7 +130,7 @@ def main(args):
     wandb.login()
 
 #     name = None
-    run = wandb.init(project="comparison", entity="smonaco", name=name, tags=["loto_cv_with5"])
+    run = wandb.init(project="comparison", entity="smonaco", name=name, tags=["loto_cv_with5"], reinit=True)
     
     
     print("---------------------------------------")
@@ -148,7 +148,7 @@ def main(args):
     print("---------------------------------------\n")
     
         
-    if str(args.dataset) != 'nw' and not args.tiling:
+    if args.dataset != 'nw' and not args.tiling:
         dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
         data_dir = dataset.download()
     #     data_dir = f"artifacts/dataset:{args.dataset}"
@@ -243,6 +243,7 @@ def main(args):
         real_mask_PATH = hparams["mask_path"]
         real_img_PATH = hparams["image_path"]
         write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test')
+    wandb.finish()
     return
 
 
