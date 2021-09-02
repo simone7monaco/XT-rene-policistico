@@ -244,7 +244,8 @@ def main(args):
     
         real_mask_PATH = hparams["mask_path"]
         real_img_PATH = hparams["image_path"]
-        write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test')
+        write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test', maskp=hparams["mask_path"], imgp=hparams["image_path"])
+        
     wandb.finish()
     return
 

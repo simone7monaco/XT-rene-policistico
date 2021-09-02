@@ -48,10 +48,10 @@ remove_holes = RemoveSmallHoles(area_threshold=10000)
 remove_objects = RemoveSmallObjects(min_size=5000)
 
 
-ROOT = Path('.')
-real_mask_PATH = ROOT / 'artifacts/dataset:v6/masks'
+ROOT = Path.cwd()
+real_mask_PATH = ROOT / 'artifacts/dataset:v10/masks'
 real_annot_PATH = ROOT / 'annotations_original/full_dataset'
-real_img_PATH = ROOT / 'artifacts/dataset:v6/images'
+real_img_PATH = ROOT / 'artifacts/dataset:v10/images'
 # real_annot_PATH = ROOT / 'annotations_original/all_oldnames'
 # real_img_PATH = ROOT / 'images_original/all_oldnames/'
 
@@ -382,7 +382,10 @@ def missed_wrong_cysts_dict(gt: np.array, pred: np.array, cutoff=288): #TODO: Sp
     return cysts, len(gt_contours), len(pred_contours)
 
 
-def write_results(folder, is_jpg=False):
+def write_results(folder, is_jpg=False, maskp=None, imgp=None):
+    if maskp: real_mask_PATH = maskp
+    if imgp: real_img_PATH = imgp
+
     np.seterr('raise')
     datafile_im = folder / "images_table.csv"
     datafile_cy = folder / "cysts_table.csv"

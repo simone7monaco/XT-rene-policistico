@@ -59,7 +59,7 @@ def eval_model(args, model, save_fps=False):
         with open(args.inpath / 'split_samples.pickle', 'rb') as file:
             samples = pickle.load(file)[args.subset]
     else:
-        samples = get_samples('artifacts/dataset:v7/images', 'artifacts/dataset:v7/masks')
+        samples = get_samples('artifacts/dataset:v10/images', 'artifacts/dataset:v10/masks')
 
     dataset = SegmentationDataset(samples, transform, length=None)
 
