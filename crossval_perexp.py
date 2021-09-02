@@ -116,7 +116,9 @@ def main(args):
                 hparams["optimizer"]["lr"] = bs_results[args.alternative_model]["optimizer"]["lr"]
     
             
-
+    hparams['seed'] = args.seed
+    hparams['test_tube'] = args.test_tube
+    
     if torch.cuda.device_count() > 1:
         hparams["num_workers"] = 4
         hparams["train_parameters"]["batch_size"] = 16
@@ -147,7 +149,7 @@ def main(args):
     print(f"          fold: {args.kth_fold}       ")
     print("---------------------------------------\n")
     
-        
+    
     if args.dataset != 'nw' and not args.tiling:
         dataset = run.use_artifact(f'rene-policistico/upp/dataset:{args.dataset}', type='dataset')
         data_dir = dataset.download()
