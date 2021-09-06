@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from easydict import EasyDict as ed
 
 from UACANet.lib.losses.losses import *
 from UACANet.lib.modules.layers import *
@@ -14,6 +15,9 @@ from UACANet.lib.backbones.Res2Net_v1b import res2net50_v1b_26w_4s
 class PraNet(nn.Module):
     # res2net based encoder decoder
     def __init__(self, opt):
+        
+        if type(opt) == dict: opt = ed(opt)
+            
         super(PraNet, self).__init__()
         self.resnet = res2net50_v1b_26w_4s(pretrained=opt.pretrained, output_stride=opt.output_stride)
 

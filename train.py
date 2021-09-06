@@ -36,7 +36,7 @@ def get_args():
     parser.add_argument("--scheduler", type=str, default=None, help="Scheduler for sweep.")
 #     parser.add_argument("--transf_imsize", type=int, default=None, help="Rescale images for sweep.")
     
-    parser.add_argument("--alternative_model", type=str, default=None, help="Select model different from U++.")
+    parser.add_argument('-m', '--alternative_model', type=str, default=None, help="Select model different from U++.")
     parser.add_argument('-bs', '--b_search', type=str2bool, help="Internal bs configuration", nargs='?', const=True, default=False)
     
     parser.add_argument('-a', '--active_attention_layers', help="List of Active Attention layer (between 1~4). Write [1,3] to set AAL on blocks 1 and 3.", default=None)

@@ -193,7 +193,7 @@ def object_from_dict(d, parent=None, **default_kwargs):
 
     if parent is not None:
         return getattr(parent, object_type)(**kwargs)  # skipcq PTC-W0034
-    return pydoc.locate(object_type)(**kwargs)
+    return pydoc.locate(object_type)(**kwargs) if pydoc.locate(object_type) is not None else pydoc.locate(object_type.rsplit('.', 1)[0])(**kwargs)
 
 
 def load_rgb(image_path: Union[Path, str], lib: str = "cv2") -> np.array:

@@ -42,6 +42,10 @@ def get_model(alternative_model, hparams):
     elif alternative_model == 'pranet':
         conf = ed(yaml.load(open(Path.home() / "my_rene-policistico/UACANet/configs/PraNet.yaml"), yaml.FullLoader))
         model = eval(conf.Model.name)(conf.Model)
+        hparams["model"] = {
+            'type': model.__module__,
+            'opt': conf.Model
+        }
 
     elif alternative_model == 'hardnet':
         model = HarDMSEG()
@@ -52,6 +56,10 @@ def get_model(alternative_model, hparams):
     elif alternative_model == 'uacanet':
         conf = ed(yaml.load(open(Path.home() / "my_rene-policistico/UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
         model = eval(conf.Model.name)(conf.Model)
+        hparams["model"] = {
+            'type': model.__module__,
+            'opt': conf.Model
+        }
 
     elif alternative_model == 'unet':
         hparams["model"]["type"] = "segmentation_models_pytorch.Unet"

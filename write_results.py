@@ -58,7 +58,7 @@ real_img_PATH = ROOT / 'artifacts/dataset:v10/images'
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val stratified from the others')
     parser.add_argument("-i", "--inpath", type=Path, help="Path containing image predicitions.", required=True)
-    parser.add_argument("-d", "--dataset", default='v7')
+    parser.add_argument("-d", "--dataset", default=None)
     
     return parser.parse_args()
 
@@ -383,9 +383,6 @@ def missed_wrong_cysts_dict(gt: np.array, pred: np.array, cutoff=288): #TODO: Sp
 
 
 def write_results(folder, is_jpg=False, maskp=None, imgp=None):
-    if maskp: real_mask_PATH = maskp
-    if imgp: real_img_PATH = imgp
-
     np.seterr('raise')
     datafile_im = folder / "images_table.csv"
     datafile_cy = folder / "cysts_table.csv"
@@ -419,8 +416,8 @@ def write_results(folder, is_jpg=False, maskp=None, imgp=None):
         # dict of cysts as {'state': state, 'areas': [AREA_real, AREA_pred], 'centers': [(x_r, y_r), (x_p, y_p)]}
 #         s.name = get_old_name(name)            
             
-        assert (real_mask_PATH / f'{name}.png').exists(), real_mask_PATH / f'{name}.png'
-        gt = open_mask(real_mask_PATH / f'{name}.png')
+        assert (maskp / f'{name}.png').exists(), maskp / f'{name}.png'
+        gt = open_mask(maskp / f'{name}.png')
         pred_img = open_mask(pred)
         
         cysts, IM_s['total_real'], IM_s['total_pred'] = missed_wrong_cysts_dict(gt, pred_img)
@@ -464,9 +461,14 @@ if __name__ == '__main__':
     args = get_args()
     res_model_PATH = args.inpath
     
-    real_mask_PATH = ROOT / f'artifacts/dataset:{args.dataset}/masks'
-    real_img_PATH = ROOT / f'artifacts/dataset:{args.dataset}/images'
+    if args.dataset is not None:
+        d_fold = f'artifacts/dataset:{args.dataset}'
+    else:
+        d_fold = sorted(Path('artifacts').iterdir(), key=lambda n: int(n.stem.split(':v')[-1]))[-1]
+        
+    real_mask_PATH = d_fold / 'masks'
+    real_img_PATH = d_fold / 'images'
     
     t0 = time()
-    write_results(res_model_PATH, is_jpg=False)
+    write_results(res_model_PATH, is_jpg=False, maskp=real_mask_PATH, imgp=real_img_PATH)
     print(f"\n__________________ Finished in {time()-t0} s __________________")

@@ -3,9 +3,8 @@ seed: 1989
 
 num_workers: 0
 experiment_name: "training"
-image_path: "artifacts/dataset:v4/images"
-mask_path: "artifacts/dataset:v4/masks"
-# mask_path: "/home/students/s265780/my_rene-policistico/masks/tiled_train_masks_4"
+image_path: "artifacts/dataset:v10/images"
+mask_path: "artifacts/dataset:v10/masks"
 val_split: 0.2
 
 model:
@@ -21,14 +20,14 @@ scheduler:
   T_mult: 2
 
 train_parameters:
-  batch_size: 4
+  batch_size: 8
 
 checkpoint_callback:
   type: pytorch_lightning.callbacks.ModelCheckpoint
   dirpath: "./cyst_checkpoints/Mod_Comparison"
-  monitor: valid_loss
+  monitor: val_iou
   verbose: True
-  mode: min
+  mode: max
   save_top_k: 1
   
 earlystopping_callback:

@@ -197,35 +197,24 @@ def main(args):
     logger.log_hyperparams(hparams)
     logger.watch(model, log='all', log_freq=1)
 
-#     if args.alternative_model == 'uacanet':
-#         opt = ed(yaml.load(open('UACANet/configs/UACANet-L.yaml'), yaml.FullLoader))
-#         opt.Train.train_save = hparams["checkpoint_callback"]["dirpath"]
-#         train_aug = from_dict(hparams["train_aug"])
-#         train(opt, splits['train'], splits['valid'], train_aug)
-#     elif args.alternative_model == 'pranet':
-#         opt = ed(yaml.load(open('UACANet/configs/PraNet.yaml'), yaml.FullLoader))
-#         opt.Train.train_save = hparams["checkpoint_callback"]["dirpath"]
-#         train_aug = from_dict(hparams["train_aug"])
-#         train(opt, splits['train'], splits['valid'], train_aug)
-    if True:
-        trainer = pl.Trainer(
-            gpus=1 if torch.cuda.is_available() else 0,
-        #     accumulate_grad_batches=4,
-            max_epochs=100,
-        #     distributed_backend="ddp",  # DistributedDataParallel
-            progress_bar_refresh_rate=1,
-            benchmark=True,
-            callbacks=[checkpoint_callback,
-                       earlystopping_callback
-                      ],
-            precision=16 if torch.cuda.is_available() else 32,
-            gradient_clip_val=5.0,
-            num_sanity_val_steps=5,
-            sync_batchnorm=True,
-            logger=logger,
-        )
+    trainer = pl.Trainer(
+        gpus=1 if torch.cuda.is_available() else 0,
+    #     accumulate_grad_batches=4,
+        max_epochs=100,
+    #     distributed_backend="ddp",  # DistributedDataParallel
+        progress_bar_refresh_rate=1,
+        benchmark=True,
+        callbacks=[checkpoint_callback,
+                   earlystopping_callback
+                  ],
+        precision=16 if torch.cuda.is_available() else 32,
+        gradient_clip_val=5.0,
+        num_sanity_val_steps=5,
+        sync_batchnorm=True,
+        logger=logger,
+    )
 
-        trainer.fit(model)
+    trainer.fit(model)
     
     if args.eval_network:
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
