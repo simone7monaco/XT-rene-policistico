@@ -46,7 +46,6 @@ def get_model(alternative_model, hparams):
             'type': model.__module__,
             'opt': conf.Model
         }
-
     elif alternative_model == 'hardnet':
         model = HarDMSEG()
 
@@ -60,7 +59,6 @@ def get_model(alternative_model, hparams):
             'type': model.__module__,
             'opt': conf.Model
         }
-
     elif alternative_model == 'unet':
         hparams["model"]["type"] = "segmentation_models_pytorch.Unet"
         model = object_from_dict(hparams["model"])
@@ -206,6 +204,7 @@ class SegmentCyst(pl.LightningModule):
         if self.debug: print(f"3- {print_usage()}")
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
+        self.log("train_iou", binary_mean_iou(logits, masks))
 #         batch_size = self.hparams["train_parameters"]["batch_size"]
         
         if not self.discard_res:

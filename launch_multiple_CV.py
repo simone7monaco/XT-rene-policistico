@@ -24,6 +24,7 @@ for s in scripts:
         ed({"alternative_model": model,
         "config_path": Path('configs/baseline.yaml'), 
         "dataset": 'latest',
+        "tag": "loto_cv_with5",
         "discard_results": True,
         "eval_network": True,
         "exp_tested": None,

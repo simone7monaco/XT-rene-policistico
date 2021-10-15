@@ -113,26 +113,12 @@ def eval_model(args, model, save_fps=False):
 if __name__ == '__main__':
     args = get_args()
     
-    model = torch.load(next(args.inpath.glob("*.ckpt")))['hyper_parameters']['model']
-    model = object_from_dict(model)
-    
-#     model = HarDMSEG()
-#     model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
-    model = model.to(device)
-
     checkpoint = torch.load(next(args.inpath.glob("*.ckpt")), map_location=lambda storage, loc: storage)
+    model = object_from_dict(checkpoint['hyper_parameters']['model'])
+    model = model.to(device)
     
-    corrections = {"model.": ""}
-    state_dict = state_dict_from_disk(
-        file_path = next(args.inpath.glob("*.ckpt")),
-        rename_in_layers=corrections,
-    )
+    state_dict = {k.split('model.')[-1]: v for k, v in checkpoint["state_dict"].items()}
 
-#     print(model.__name__)
-#     print(list(state_dict.keys())[:5])
-#     print(list(model.state_dict().keys())[:5])
-#     yay
-    
     model.load_state_dict(state_dict)
 
     eval_model(args, model)

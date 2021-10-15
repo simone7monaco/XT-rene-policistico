@@ -31,7 +31,7 @@ class SegmentationDataset(Dataset):
         return self.length
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
-        idx = idx % len(self.samples)
+#         idx = idx % len(self.samples)
 
         image_path, mask_path = self.samples[idx]
         # print("-------------------------------------------------")

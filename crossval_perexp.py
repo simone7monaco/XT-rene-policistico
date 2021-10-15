@@ -30,32 +30,44 @@ def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
     parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='latest')
-    parser.add_argument("-e", "--exp_tested", default=None, type=int, help="Experiment to put in test set")
-    parser.add_argument("-t", "--test_tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
-    parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels (only avaiable from 'v6' dataset).")
+    parser.add_argument("--tag", type=str, help="Add custom tag on the wandb run (only one tag is supported).", default=None)#'loto_cv_with5')
     
-    parser.add_argument("--alternative_model", type=str, default=None, help="Select model different from U++.")
-
+    parser.add_argument("-e", "--exp", default=None, type=int, help="Experiment to put in test set")
+    parser.add_argument("--single_exp", default=None, type=int, help="Perform CV only on a single experiment.")
+    parser.add_argument("-t", "--tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
+    
+    parser.add_argument("-m", "--alternative_model", type=str, default=None, help="Select model different from U++.")
     parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
+    
     parser.add_argument("--stratify_fold", nargs='?', type=str2bool, default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
     
-    parser.add_argument("--eval_network", nargs='?', type=str2bool, default=False, const=True, help="Performs evaluation on the defined test set.")
+    parser.add_argument("-f", "--focus_size", default=None, help="Select 'small_cysts' ('s') or 'big_cysts' ('b') labels (only avaiable from 'v6' dataset).")
     parser.add_argument("--tiling", nargs='?', type=str2bool, default=False, const=True, help="If applied, uses the latest tiled-dataset available in WB.")
+    
+#     parser.add_argument("--eval_network", nargs='?', type=str2bool, default=False, const=True, help="Performs evaluation on the defined test set.")
     parser.add_argument('--discard_results', nargs='?', type=str2bool, default=False, const=True, help = "Prevent Wandb to save validation result for each step.")
     
     
     return parser.parse_args()
 
 
-def date_to_exp(date):
-    date_exps = {'0919': 1, '1019': 2, '072020':3, '092020':3, '122020':4, '0721':5}
-    date = ''.join((date).split('.')[1:])
-    return date_exps[date]
-
-
-def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroups=False):
+def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroups=False, single_exp=None):
     samples = get_samples(hparams["image_path"], hparams["mask_path"])
+    
+    ##########################################################
+    if single_exp == 1:
+        samples = [u for u in samples if "09.19" in u[0].stem]
+    if single_exp == 2:
+        samples = [u for u in samples if "10.19" in u[0].stem]
+    if single_exp == 3:
+        samples = [u for u in samples if "07.2020" in u[0].stem or "09.2020" in u[0].stem]
+    if single_exp == 4:
+        samples = [u for u in samples if "12.2020" in u[0].stem]
+        samples = [u for u in samples if "ctrl 11" in u[0].stem.lower() or "t4" in u[0].stem.lower()]
+    if single_exp == 5:
+        samples = [u for u in samples if "07.21" in u[0].stem]
+    ##########################################################
     
     names = [file[0].stem for file in samples]
 
@@ -66,7 +78,8 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
     df["treatment"] = [u[1] for u in unpack]
     df["exp"] = [date_to_exp(u[0]) for u in unpack]
     df["tube"] = [u[2] for u in unpack]
-    df["te"] = df.treatment + '_' + df.exp.astype(str)
+#     df["te"] = df.treatment + '_' + df.exp.astype(str)
+    df["te"] = df.treatment + '_' + df.exp.astype(str) + '_' + df.tube.astype(str)
     df.te = df.te.astype('category')
     
     if test_exp is not None or leave_one_out is not None:
@@ -88,7 +101,7 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
         train_idx, val_idx = list(skf.split(df.filename, df.te))[k]
     else:
         df, samples = shuffle(df, samples, random_state=hparams["seed"])
-        gkf = GroupKFold(n_splits=5)
+        gkf = GroupKFold(n_splits=5)# =5)
         train_idx, val_idx = list(gkf.split(df.filename, groups=df.te))[k]
     
     train_samp = [tuple(x) for x in np.array(samples)[train_idx]]
@@ -117,22 +130,34 @@ def main(args):
     
             
     hparams['seed'] = args.seed
-    hparams['test_tube'] = args.test_tube
+    hparams['tube'] = args.tube
     
-    if torch.cuda.device_count() > 1:
+    if "SLURM_JOB_ID" in os.environ:
         hparams["num_workers"] = 4
         hparams["train_parameters"]["batch_size"] = 16
         print('HI LEGION!')
 
 #     name = f"crossval_exp{exp}"
-    if args.test_tube is not None:
-        name = f"test_tube_{args.test_tube}_seed_{args.seed}_model_{args.alternative_model}"
-    else:
-        name = f"fold_{args.kth_fold}_seed_{args.seed}"
+    name = "test"
+    for kind in ["tube", "exp", "seed", "alternative_model", "tag"]:
+        if getattr(args, kind) is not None:
+            n = f"_{kind}" if not "model" in kind else "_model"
+            if kind == "tag": n = ""
+            name += f"{n}_{getattr(args, kind)}"
+            
+#     if args.tube is not None:
+#         name = f"tube_{args.tube}_seed_{args.seed}_model_{args.alternative_model}"
+#     elif args.exp is not None:
+#         name = f"test_exp_{args.exp}_seed_{args.seed}_model_{args.alternative_model}"
+#     else:
+#         name = f"fold_{args.kth_fold}_seed_{args.seed}"
+    
+#     if args.tag is not None:
+#         name += f"_{args.tag}"
     wandb.login()
 
 #     name = None
-    run = wandb.init(project="comparison", entity="smonaco", name=name, tags=["loto_cv_with5"], reinit=True)
+    run = wandb.init(project="comparison", entity="smonaco", name=name, tags=[args.tag], reinit=True)
     
     
     print("---------------------------------------")
@@ -141,10 +166,10 @@ def main(args):
         print("         with tiled dataset        ")
     if args.alternative_model is not None:
         print(f"         model: {args.alternative_model}  ")
-    if args.exp_tested is not None:
-        print(f"           exp: {args.exp_tested}  ")
-    if args.test_tube is not None:
-        print(f"     test_tube: {args.test_tube}  ")
+    if args.exp is not None:
+        print(f"           exp: {args.exp}  ")
+    if args.tube is not None:
+        print(f"         tube: {args.tube}  ")
     print(f"          seed: {args.seed}           ")
     print(f"          fold: {args.kth_fold}       ")
     print("---------------------------------------\n")
@@ -173,10 +198,10 @@ def main(args):
     
 #     if args.alternative_model is not None:
 #         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"{args.alternative_model}"
-#     if args.exp_tested is not None:
-#         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"exp_{args.exp_tested}"
-#     if args.test_tube is not None:
-#         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"exp_{args.test_tube}"
+#     if args.exp is not None:
+#         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"exp_{args.exp}"
+#     if args.tube is not None:
+#         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / f"exp_{args.tube}"
     
     hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
     hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
@@ -185,7 +210,7 @@ def main(args):
 
     earlystopping_callback = object_from_dict(hparams["earlystopping_callback"])
     
-    splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp_tested, leave_one_out=args.test_tube, strat_nogroups=args.stratify_fold)
+    splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp, leave_one_out=args.tube, strat_nogroups=args.stratify_fold, single_exp=args.single_exp)
     
     with (hparams["checkpoint_callback"]["dirpath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
@@ -216,24 +241,25 @@ def main(args):
 
     trainer.fit(model)
     
-    if args.eval_network:
-        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        model = model.to(device)
-        model.model = model.model.to(device)
-        eval_model(args=ed(inpath=hparams["checkpoint_callback"]["dirpath"],
-                           subset='test',
-                           exp=None,
-                           thresh=.5,
-                           outpath='result'
-                          ),
-                   model=model,
-                   save_fps=True
-                  )
+#     if args.eval_network:
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model.to(device)
+    model.model = model.model.to(device)
+    eval_model(args=ed(inpath=hparams["checkpoint_callback"]["dirpath"],
+                       subset='test',
+                       exp=None,
+                       thresh=.5,
+                       outpath='result'
+                      ),
+               model=model,
+               save_fps=True
+              )
         
     
-        real_mask_PATH = hparams["mask_path"]
-        real_img_PATH = hparams["image_path"]
-        write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test', maskp=hparams["mask_path"], imgp=hparams["image_path"])
+    real_mask_PATH = hparams["mask_path"]
+    real_img_PATH = hparams["image_path"]
+    write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test',
+                  maskp=hparams["mask_path"], imgp=hparams["image_path"])
         
     wandb.finish()
     return

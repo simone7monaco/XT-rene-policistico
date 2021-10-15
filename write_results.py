@@ -221,14 +221,19 @@ def exp_to_dates(n):
     if n == 3: return ['29-30.07.2020', '2-3.09.2020']
     if n == 4: return ['11.12.2020', '18.12.2020']
     
+
 def date_to_exp(date):
-    if type(date) == pd.Timestamp:
-        date = f"{date.day}{date.year}" # actually this is "month.year"
-    else:
-        date = "".join(date.split('.')[1:])
-    
-    date_exps = {'0919': 1, '1019': 2, '072020':3, '092020':3, '122020':4}
+    date_exps = {'0919': 1, '1019': 2, '072020':3, '092020':3, '122020':4, '0721':5}
+    date = ''.join((date).split('.')[1:])
     return date_exps[date]
+# def date_to_exp(date):
+#     if type(date) == pd.Timestamp:
+#         date = f"{date.day}{date.year}" # actually this is "month.year"
+#     else:
+#         date = "".join(date.split('.')[1:])
+    
+#     date_exps = {'0919': 1, '1019': 2, '072020':3, '092020':3, '122020':4, '0721':5}
+#     return date_exps[date]
     
 def mean_density(df):
     means = np.array([df[(df.date==d) & (df.treatment=='CTRL')].density.mean() for d in df.date.unique() if 'CTRL' in df[df.date==d].treatment.unique()])
@@ -455,6 +460,19 @@ def write_results(folder, is_jpg=False, maskp=None, imgp=None):
     print(f'Results saved in "{datafile_im.parent}"')
     return
     
+def read_from_splits(path):
+    with open(path, "rb") as f:
+        sp = pickle.load(f)
+        
+    samples = []
+    for key, s in sp.items():
+        for l in s:
+            tmp = unpack_name(l)
+            unpaks = [key] + list(tmp.values())
+            unpaks.append(date_to_exp_n(unpaks[1]))
+            samples.append(unpaks)
+
+    return pd.DataFrame(samples, columns=['key']+list(tmp.keys())+['exp'])
     
 
 if __name__ == '__main__':

@@ -24,7 +24,7 @@ train_parameters:
 
 checkpoint_callback:
   type: pytorch_lightning.callbacks.ModelCheckpoint
-  dirpath: "./cyst_checkpoints/Mod_Comparison"
+  dirpath: "./cyst_checkpoints/bigdata"
   monitor: val_iou
   verbose: True
   mode: max
