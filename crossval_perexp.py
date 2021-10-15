@@ -37,7 +37,7 @@ def get_args():
     parser.add_argument("-t", "--tube", default=None, type=int, help="If present, select a single tube as test set (integer index between 0 and 31).")
     
     parser.add_argument("-m", "--alternative_model", type=str, default=None, help="Select model different from U++.")
-    parser.add_argument("-k", "--kth_fold", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
+    parser.add_argument("-k", "--k", type=int, default=0, help="Number of the fold to consider between 0 and 4.")
     parser.add_argument("-s", "--seed", type=int, default=None, help="Change the seed to the desired one.")
     
     parser.add_argument("--stratify_fold", nargs='?', type=str2bool, default=False, const=True, help="Split dataset with StratifiedKFold instead of GroupKFold.")
@@ -64,7 +64,7 @@ def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroup
         samples = [u for u in samples if "07.2020" in u[0].stem or "09.2020" in u[0].stem]
     if single_exp == 4:
         samples = [u for u in samples if "12.2020" in u[0].stem]
-        samples = [u for u in samples if "ctrl 11" in u[0].stem.lower() or "t4" in u[0].stem.lower()]
+#         samples = [u for u in samples if "ctrl 11" in u[0].stem.lower() or "t4" in u[0].stem.lower()]
     if single_exp == 5:
         samples = [u for u in samples if "07.21" in u[0].stem]
     ##########################################################
@@ -139,7 +139,7 @@ def main(args):
 
 #     name = f"crossval_exp{exp}"
     name = "test"
-    for kind in ["tube", "exp", "seed", "alternative_model", "tag"]:
+    for kind in ["tube", "exp", "k", "seed", "alternative_model", "tag"]:
         if getattr(args, kind) is not None:
             n = f"_{kind}" if not "model" in kind else "_model"
             if kind == "tag": n = ""
@@ -150,7 +150,7 @@ def main(args):
 #     elif args.exp is not None:
 #         name = f"test_exp_{args.exp}_seed_{args.seed}_model_{args.alternative_model}"
 #     else:
-#         name = f"fold_{args.kth_fold}_seed_{args.seed}"
+#         name = f"fold_{args.k}_seed_{args.seed}"
     
 #     if args.tag is not None:
 #         name += f"_{args.tag}"
@@ -171,7 +171,7 @@ def main(args):
     if args.tube is not None:
         print(f"         tube: {args.tube}  ")
     print(f"          seed: {args.seed}           ")
-    print(f"          fold: {args.kth_fold}       ")
+    print(f"          fold: {args.k}       ")
     print("---------------------------------------\n")
     
     
@@ -210,7 +210,7 @@ def main(args):
 
     earlystopping_callback = object_from_dict(hparams["earlystopping_callback"])
     
-    splits = split_dataset(hparams, k=args.kth_fold, test_exp=args.exp, leave_one_out=args.tube, strat_nogroups=args.stratify_fold, single_exp=args.single_exp)
+    splits = split_dataset(hparams, k=args.k, test_exp=args.exp, leave_one_out=args.tube, strat_nogroups=args.stratify_fold, single_exp=args.single_exp)
     
     with (hparams["checkpoint_callback"]["dirpath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
