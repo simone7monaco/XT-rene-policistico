@@ -71,10 +71,9 @@ def get_model(alternative_model, hparams):
     
 
 class SegmentCyst(pl.LightningModule):
-    def __init__(self, hparams, splits=[None, None], discard_res=False, alternative_model=None, debug=None):
+    def __init__(self, hparams, splits=[None, None], discard_res=False, alternative_model=None):
         super().__init__()
         
-        self.debug = debug
         self.model_name = alternative_model
         self.model = get_model(alternative_model, hparams)
         
@@ -120,7 +119,6 @@ class SegmentCyst(pl.LightningModule):
             self.train_samples = samples[:num_train]
             self.val_samples = samples[num_train:]
 
-        if self.debug: print_usage()
         print("Len train samples = ", len(self.train_samples))
         print("Len val samples = ", len(self.val_samples))
 
@@ -141,7 +139,6 @@ class SegmentCyst(pl.LightningModule):
             drop_last=True,
         )
         
-        if self.debug: print_usage()
         print("Train dataloader = ", len(result))
         return result
 
@@ -184,11 +181,9 @@ class SegmentCyst(pl.LightningModule):
     
     
     def training_step(self, batch, batch_idx):
-        if self.debug: print_usage()
         features = batch["features"]
         masks = batch["masks"]
                 
-        if self.debug: print_usage()
         if self.model_name in ['uacanet', 'pranet']:
             logits = self.forward(features, masks)
             total_loss = logits['loss']
@@ -201,7 +196,6 @@ class SegmentCyst(pl.LightningModule):
                 total_loss += weight * ls_mask
                 self.log(f"train_mask_{loss_name}", ls_mask)
         
-        if self.debug: print(f"3- {print_usage()}")
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
         self.log("train_iou", binary_mean_iou(logits, masks))
@@ -245,12 +239,7 @@ class SegmentCyst(pl.LightningModule):
     def validation_step(self, batch, batch_id):
         features = batch["features"]
         masks = batch["masks"]
-        
-        if self.debug: print_usage()
-
         result = {}
-        
-        
         
         if self.model_name in ['uacanet', 'pranet']:
             logits = self.forward(features, masks)
@@ -265,8 +254,6 @@ class SegmentCyst(pl.LightningModule):
             result["valid_loss"] = total_loss
             
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
-
-        if self.debug: print_usage()
 
         result["val_iou"] = binary_mean_iou(logits, masks)
         

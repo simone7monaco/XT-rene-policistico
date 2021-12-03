@@ -1,15 +1,22 @@
-ss    sshardnet:
-    train_parameters:
-      batch_size: 16
-    optimizer:
-      lr: 0.0001
 pranet:
-    train_parameters:
-      batch_size: 4
-    optimizer:
-      lr: 0.0007
+  max_supported_bs: 8
+  lr: 0.0017
+
+unetpp:
+  max_supported_bs: 4
+  lr: 0.0001
+
+unet:
+  max_supported_bs: 8
+  lr: 0.0004
+
+
 uacanet:
-    train_parameters:
-      batch_size: 4
-    optimizer:
-      lr: 0.0001
+  batch_size: 4
+  lr: 0.0001
+
+hardnet: #still-todo
+  train_parameters:
+    batch_size: 16
+  optimizer:
+    lr: 0.0001

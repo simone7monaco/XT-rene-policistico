@@ -1,14 +1,8 @@
-optimizer_types = {
+obj_dict = {
     "adam" : "torch.optim.Adam",
     "adamp" : "adamp.AdamP",
-}
-
-model_types = {
     "unet" : "segmentation_models_pytorch.Unet",
     "upp" : "segmentation_models_pytorch.UnetPlusPlus",
-}
-
-scheduler_types = {
     "reducedonplateau" : {
         'type' : "torch.optim.lr_scheduler.ReduceLROnPlateau",
         'factor': 0.25,
@@ -24,17 +18,37 @@ scheduler_types = {
 
 
 def get_sweep(hparams, args):
-    if hasattr(args, "batch_size") and args.batch_size:
-        hparams["train_parameters"]["batch_size"] = args.batch_size
+    for k in args.__dict__:
+        if args.__dict__[k] is None or str(k) in ['alternative_model', 'dataset', 'config_path', 'tag']: continue
+        if args.__dict__[k] in obj_dict.keys(): args.__dict__[k] = obj_dict[args.__dict__[k]]
+        
+        found = False
+        if k in hparams.keys():
+#             print(f"\t [debug] exchanging {k}: {hparams[k]} --> {args.__dict__[k]}\n")
+            hparams[k] = args.__dict__[k]
+            found = True
+        for k_n in hparams.keys():
+            if type(hparams[k_n]) == dict and k in hparams[k_n].keys():
+#                 print(f"\t [debug] exchanging {k_n}/{k}: {hparams[k_n][k]} --> {args.__dict__[k]}\n")
+                hparams[k_n][k] = args.__dict__[k]
+                found = True
+                break
+        if not found: print(f"\nParameter `{k}` not found.\n")
+    return hparams
+
+
+# def get_sweep(hparams, args):
+#     if hasattr(args, "batch_size") and args.batch_size:
+#         hparams["train_parameters"]["batch_size"] = args.batch_size
     
-    if hasattr(args, "optimizer") and args.optimizer:
-        hparams["optimizer"]["type"] = optimizer_types[args.optimizer]
+#     if hasattr(args, "optimizer") and args.optimizer:
+#         hparams["optimizer"]["type"] = optimizer_types[args.optimizer]
         
-    if hasattr(args, "lr") and args.lr:
-        hparams["optimizer"]["lr"] = args.lr
+#     if hasattr(args, "lr") and args.lr:
+#         hparams["optimizer"]["lr"] = args.lr
         
-    if hasattr(args, "scheduler") and args.scheduler:
-        hparams["scheduler"] = scheduler_types[args.scheduler]
+#     if hasattr(args, "scheduler") and args.scheduler:
+#         hparams["scheduler"] = scheduler_types[args.scheduler]
         
 #     if args.model:
 #         hparams["model"]["type"] = model_types[args.model]
@@ -107,4 +121,4 @@ def get_sweep(hparams, args):
 #         trfs = ", ".join([n["__class_fullname__"].split(".")[-1] for n in transf_t])
 #         print(f"Used data augmentations: {trfs}\n")
     
-    return hparams
+#     return hparams

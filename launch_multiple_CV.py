@@ -24,16 +24,16 @@ for s in scripts:
         ed({"alternative_model": model,
         "config_path": Path('configs/baseline.yaml'), 
         "dataset": 'latest',
-        "tag": "loto_cv_with5",
+        "tag": model,
         "discard_results": True,
-        "eval_network": True,
-        "exp_tested": None,
+        "exp": None,
         "focus_size": None,
-        "kth_fold": 0,
+        "k": 0,
         "seed": int(seed),
         "stratify_fold": False,
-        "test_tube": int(tube),
+        "tube": int(tube),
         "tiling": False,
+        "single_exp": None
        })
     )
     print("\n\n\n\n\n")

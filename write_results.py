@@ -425,7 +425,7 @@ def write_results(folder, is_jpg=False, maskp=None, imgp=None):
         gt = open_mask(maskp / f'{name}.png')
         pred_img = open_mask(pred)
         
-        cysts, IM_s['total_real'], IM_s['total_pred'] = missed_wrong_cysts_dict(gt, pred_img)
+        cysts, IM_s['total_real'], IM_s['total_pred'] = missed_wrong_cysts_dict(gt, pred_img, cutoff=0)
         
         IM_s['tube_area'] = tube_area(name)
             

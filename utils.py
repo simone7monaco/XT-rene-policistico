@@ -2,7 +2,12 @@ import argparse
 import torch
 from pathlib import Path
 from typing import Union, Dict, List, Tuple
+from simplify_names import get_packs
+import pandas as pd
+from sklearn.utils import shuffle
+from sklearn.model_selection import StratifiedKFold, GroupKFold
 import cv2
+from write_results import date_to_exp
 
 
 def get_id2_file_paths(path: Union[str, Path]) -> Dict[str, Path]:
@@ -18,6 +23,68 @@ def mem_values(mem):
         next(keys)
         
     return f"{mem:.3} {next(keys)}"
+
+
+def split_dataset(hparams, k=0, test_exp=None, leave_one_out=None, strat_nogroups=False, single_exp=None):
+    samples = get_samples(hparams["image_path"], hparams["mask_path"])
+    
+    ##########################################################
+    if single_exp == 1:
+        samples = [u for u in samples if "09.19" in u[0].stem]
+    if single_exp == 2:
+        samples = [u for u in samples if "10.19" in u[0].stem]
+    if single_exp == 3:
+        samples = [u for u in samples if "07.2020" in u[0].stem or "09.2020" in u[0].stem]
+    if single_exp == 4:
+        samples = [u for u in samples if "12.2020" in u[0].stem]
+#         samples = [u for u in samples if "ctrl 11" in u[0].stem.lower() or "t4" in u[0].stem.lower()]
+    if single_exp == 5:
+        samples = [u for u in samples if "07.21" in u[0].stem]
+    ##########################################################
+    
+    names = [file[0].stem for file in samples]
+
+#     date, treatment, tube, zstack, side =
+    unpack = [get_packs(name) for name in names]
+    df = pd.DataFrame([])
+    df["filename"] = names
+    df["treatment"] = [u[1] for u in unpack]
+    df["exp"] = [date_to_exp(u[0]) for u in unpack]
+    df["tube"] = [u[2] for u in unpack]
+#     df["te"] = df.treatment + '_' + df.exp.astype(str)
+    df["te"] = df.treatment + '_' + df.exp.astype(str) + '_' + df.tube.astype(str)
+    df.te = df.te.astype('category')
+    
+    if test_exp is not None or leave_one_out is not None:
+        if leave_one_out is not None:
+            tubes = df[['exp','tube']].astype(int).sort_values(by=['exp', 'tube']).drop_duplicates().reset_index(drop=True).xs(leave_one_out)
+            test_idx = df[(df.exp == tubes.exp)&(df.tube == str(tubes.tube))].index
+            
+        else:
+            test_idx = df[df.exp == test_exp].index
+    
+        test_samp = [x for i, x in enumerate(samples) if i in test_idx]
+        samples = [x for i, x in enumerate(samples) if i not in test_idx]
+        df = df.drop(test_idx)
+    else:
+        test_samp = None
+        
+    if strat_nogroups:
+        skf = StratifiedKFold(n_splits=5, random_state=hparams["seed"], shuffle=True)
+        train_idx, val_idx = list(skf.split(df.filename, df.te))[k]
+    else:
+        df, samples = shuffle(df, samples, random_state=hparams["seed"])
+        gkf = GroupKFold(n_splits=5)# =5)
+        train_idx, val_idx = list(gkf.split(df.filename, groups=df.te))[k]
+    
+    train_samp = [tuple(x) for x in np.array(samples)[train_idx]]
+    val_samp = [tuple(x) for x in np.array(samples)[val_idx]]
+    
+    return {
+        "train": train_samp,
+        "valid": val_samp,
+        "test": test_samp
+    }
 
 
 def print_usage():
