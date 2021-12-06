@@ -176,7 +176,7 @@ def train(config, splits, hparams, name=None):
             
     trainer.fit(model)
     model.logger.experiment.log({"max_val_iou": model.max_val_iou})
-
+    return model
 
 
 if __name__ == "__main__":

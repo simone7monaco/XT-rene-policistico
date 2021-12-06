@@ -87,7 +87,8 @@ def main(args):
                            strat_nogroups=args.stratify_fold,
                            single_exp=args.single_exp)
     
-    train(args, splits, hparams, name)
+    model = train(args, splits, hparams, name)
+
     
 #     if args.eval_network:
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")

@@ -6,6 +6,10 @@ unetpp:
   max_supported_bs: 4
   lr: 0.0001
 
+unetplusplus:
+  max_supported_bs: 4
+  lr: 0.0001
+
 unet:
   max_supported_bs: 8
   lr: 0.0004
