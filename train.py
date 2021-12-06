@@ -75,7 +75,8 @@ def train(config, splits, hparams, name=None):
     run = wandb.init(project="at_nature",
                      entity="rene-policistico", config=hparams,
                      settings=wandb.Settings(start_method='fork'),
-                     tags=[config.tag] if config.tag else None, reinit=True
+                     tags=[config.tag] if config.tag else None, reinit=True,
+                     name=name
                     )
     model = SegmentCyst(hparams, splits,
                         discard_res=config.discard_results,
@@ -159,7 +160,7 @@ def train(config, splits, hparams, name=None):
     trainer = pl.Trainer(
         gpus=1 if torch.cuda.is_available() else 0,
         accumulate_grad_batches=config.acc_grad if hasattr(config, 'acc_grad') else 1,
-        max_epochs=100,
+        max_epochs=2,
     #     distributed_backend="ddp",  # DistributedDataParallel
         progress_bar_refresh_rate=1,
         benchmark=True,
