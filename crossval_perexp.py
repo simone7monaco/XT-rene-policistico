@@ -88,6 +88,9 @@ def main(args):
                            single_exp=args.single_exp)
     
     model = train(args, splits, hparams, name)
+    if model is None:
+        wandb.finish 
+        return
 
     
 #     if args.eval_network:
