@@ -14,13 +14,10 @@ unet:
   max_supported_bs: 8
   lr: 0.0004
 
-
+hardnet: #still-todo
+  max_supported_bs: 8
+  lr: 0.0004
+  
 uacanet:
   batch_size: 4
   lr: 0.0001
-
-hardnet: #still-todo
-  train_parameters:
-    batch_size: 16
-  optimizer:
-    lr: 0.0001

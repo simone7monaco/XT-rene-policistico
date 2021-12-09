@@ -34,7 +34,7 @@ earlystopping_callback:
   type: pytorch_lightning.callbacks.early_stopping.EarlyStopping
   monitor: valid_loss
   min_delta: 0.001
-  patience: 10
+  patience: 7
   verbose: True
   mode: min
 
