@@ -19,12 +19,13 @@ for s in scripts:
     model = [t.split("=")[-1] for t in s if "model" in t][0]
     seed = [t.split("=")[-1] for t in s if "seed" in t][0]
     tube = [t.split("=")[-1] for t in s if "tube" in t][0]
+    tag = [t.split("=")[-1] for t in s if "tag" in t][0]
     
     launch_cv(
         ed({"alternative_model": model,
         "config_path": Path('configs/baseline.yaml'), 
         "dataset": 'latest',
-        "tag": model,
+        "tag": tag,
         "discard_results": True,
         "exp": None,
         "focus_size": None,
