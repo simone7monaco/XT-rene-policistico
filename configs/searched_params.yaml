@@ -1,6 +1,7 @@
 pranet:
   max_supported_bs: 8
-  lr: 0.0017
+#   lr: 0.0017
+  lr: 0.00017
 
 unetpp:
   max_supported_bs: 4

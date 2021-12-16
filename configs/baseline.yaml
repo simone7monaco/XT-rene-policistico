@@ -24,7 +24,7 @@ train_parameters:
 
 checkpoint_callback:
   type: pytorch_lightning.callbacks.ModelCheckpoint
-  dirpath: "./cyst_checkpoints/Nature"
+  dirpath: "./cyst_checkpoints/Nature_v2"
   monitor: val_iou
   verbose: True
   mode: max
