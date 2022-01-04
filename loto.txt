@@ -1,12 +1,3 @@
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=0
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=1
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=2
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=3
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=4
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=5
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=6
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=11 --tube=7
-crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=hardnet --tag=lotocv --discard_results=true --seed=7 --tube=31
 crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=pranet --tag=lotocv --discard_results=true --seed=7 --tube=0
 crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=pranet --tag=lotocv --discard_results=true --seed=7 --tube=1
 crossval_perexp.py --config_path=configs/baseline.yaml --alternative_model=pranet --tag=lotocv --discard_results=true --seed=7 --tube=2
