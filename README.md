@@ -1,10 +1,30 @@
 # rene-policistico
 
 ## Prerequisites
-* numpy >=1.18.4,<=1.19.4
-* Pillow
-* tqdm
-* matplotlib==3.0.3
+
+```
+numpy
+Pillow
+tqdm
+matplotlib
+easydict
+PyYAML
+torch
+torchvision
+pandas
+sklearn
+opencv-python
+IPython
+seaborn
+histolab
+addict
+pytorch_toolbelt
+albumentations
+segmentation_models_pytorch
+thop
+pytorch_lightning
+wandb
+```
 
 ## Data preprocessing
 * `annotation_original_preprocessing.py`: Clean json files created with labelme.
