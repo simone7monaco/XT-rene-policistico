@@ -78,7 +78,8 @@ class SegmentCyst(pl.LightningModule):
         self.model = get_model(alternative_model, hparams)
         
         self.discard_res = discard_res
-        self.hparams = hparams
+        # print("HPARAMS", hparams)
+        self.hparams.update(hparams)
         self.train_images = Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/train_predictions"
         self.train_images.mkdir(exist_ok=True, parents=True)
         self.val_images =  Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/valid_predictions"

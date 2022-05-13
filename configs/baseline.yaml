@@ -1,11 +1,12 @@
 ---
 seed: 1989
 
-num_workers: 0
+num_workers: 4
 experiment_name: "training"
 image_path: "artifacts/dataset:v7/images"
 mask_path: "artifacts/dataset:v7/masks"
 val_split: 0.2
+max_supported_bs: 8
 
 model:
   type: segmentation_models_pytorch.UnetPlusPlus
@@ -20,7 +21,7 @@ scheduler:
   T_mult: 2
 
 train_parameters:
-  batch_size: 8
+  batch_size: 2
 
 checkpoint_callback:
   type: pytorch_lightning.callbacks.ModelCheckpoint
@@ -42,7 +43,8 @@ val_parameters:
   batch_size: 2
 
 optimizer:
-  type: adamp.AdamP
+  # type: adamp.AdamP
+  type: torch.optim.Adam
   lr: 0.0001
 
 

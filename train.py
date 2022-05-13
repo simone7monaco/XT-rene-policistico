@@ -24,7 +24,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
+    parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", default="configs/baseline.yaml")
     parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no wandb) to use paths from the config file. Default is 'latest'.", default='v7')
     parser.add_argument('--discard_results', nargs='?', type=str2bool, default=False, const=True, help = "Prevent Wandb to save validation result for each step.")
     
@@ -64,7 +64,6 @@ def init_training(config):
             print(f"           {v}: {getattr(config, v)}  ")
     print("-------------------------------------------------\n")
     
-                
     splits = split_dataset(hparams)
     
     return splits, hparams
@@ -162,7 +161,7 @@ def train(config, splits, hparams, name=None):
         accumulate_grad_batches=config.acc_grad if hasattr(config, 'acc_grad') else 1,
         max_epochs=100,
     #     distributed_backend="ddp",  # DistributedDataParallel
-        progress_bar_refresh_rate=1,
+        # progress_bar_refresh_rate=1,
         benchmark=True,
         callbacks=[checkpoint_callback,
                    earlystopping_callback,
@@ -174,8 +173,9 @@ def train(config, splits, hparams, name=None):
         logger=logger,
     #     resume_from_checkpoint="cyst_checkpoints/prova1/epoch=20-step=8546.ckpt"
     )
-            
+    print("PRE FIT")
     trainer.fit(model)
+    print("POST FIT")
     model.logger.experiment.log({"max_val_iou": model.max_val_iou})
     return model
 

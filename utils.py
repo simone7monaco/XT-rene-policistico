@@ -11,7 +11,9 @@ from write_results import date_to_exp
 
 
 def get_id2_file_paths(path: Union[str, Path]) -> Dict[str, Path]:
-    return {x.stem: x for x in Path(path).glob("*.*")}
+    paths = {x.stem: x for x in Path(path).glob("*.*")}
+    assert paths, "No images available, maybe you didn't log into wandb?"
+    return paths
 
 
 def mem_values(mem):
@@ -252,7 +254,18 @@ def py2cfg(file_path: Union[str, Path]) -> ConfigDict:
     return ConfigDict(cfg_dict)
 
 
+def get_class( kls ):
+    parts = kls.split('.')
+    module = ".".join(parts[:-1])
+    print(module)
+    m = __import__( module )
+    for comp in parts[1:]:
+        m = getattr(m, comp)
+    return m
+
+
 def object_from_dict(d, parent=None, **default_kwargs):
+    """https://stackoverflow.com/a/452981/7924557"""
     kwargs = d.copy()
     object_type = kwargs.pop("type")
     for name, value in default_kwargs.items():
@@ -260,8 +273,8 @@ def object_from_dict(d, parent=None, **default_kwargs):
 
     if parent is not None:
         return getattr(parent, object_type)(**kwargs)  # skipcq PTC-W0034
-    return pydoc.locate(object_type)(**kwargs) if pydoc.locate(object_type) is not None else pydoc.locate(object_type.rsplit('.', 1)[0])(**kwargs)
-
+    # return pydoc.locate(object_type)(**kwargs) if pydoc.locate(object_type) is not None else pydoc.locate(object_type.rsplit('.', 1)[0])(**kwargs)
+    return get_class(object_type)(**kwargs)
 
 def load_rgb(image_path: Union[Path, str], lib: str = "cv2") -> np.array:
     """Load RGB image from path.

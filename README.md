@@ -26,6 +26,8 @@ pytorch_lightning
 wandb
 ```
 
+Example: `python train.py -c configs/baseline.yaml`
+
 ## Data preprocessing
 * `annotation_original_preprocessing.py`: Clean json files created with labelme.
 * `create_mask.ipynb`: Create and visualize binary masks from annotations.
