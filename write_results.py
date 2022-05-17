@@ -331,8 +331,8 @@ def missed_wrong_cysts_dict(gt: np.array, pred: np.array, cutoff=288): #TODO: Sp
     gt_contours, _ = cv2.findContours(gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     pred_contours, _ = cv2.findContours(pred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    gt_contours = np.array([c for c in gt_contours if c.size > 4 and cv2.contourArea(c)>cutoff])
-    pred_contours = np.array([c for c in pred_contours if c.size > 4 and cv2.contourArea(c)>cutoff])
+    gt_contours = np.array([c for c in gt_contours if c.size > 4 and cv2.contourArea(c)>cutoff], dtype=object)
+    pred_contours = np.array([c for c in pred_contours if c.size > 4 and cv2.contourArea(c)>cutoff], dtype=object)
     
     gt_seps = np.array([csr_matrix(cv2.fillPoly(np.zeros_like(gt), pts=[c], color=(1))) for c in gt_contours], dtype=object)
     

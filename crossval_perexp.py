@@ -25,7 +25,7 @@ import wandb
 
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
-    parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", required=True)
+    parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", default="configs/baseline.yaml")
     parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='latest')
     parser.add_argument("--tag", type=str, help="Add custom tag on the wandb run (only one tag is supported).", default=None)#'loto_cv_with5')
     
@@ -45,6 +45,7 @@ def get_args():
 #     parser.add_argument("--eval_network", nargs='?', type=str2bool, default=False, const=True, help="Performs evaluation on the defined test set.")
     parser.add_argument('--discard_results', nargs='?', type=str2bool, default=False, const=True, help = "Prevent Wandb to save validation result for each step.")
     
+    parser.add_argument('--debug', type=str2bool, default=False, help = "If enabled skip checks and logging")
     
     return parser.parse_args()
 
@@ -87,6 +88,18 @@ def main(args):
                            strat_nogroups=args.stratify_fold,
                            single_exp=args.single_exp)
     
+
+    if args.debug:
+        print(splits.keys())
+        print("DEBUG: reducing dataset")
+        # Take 10 images instead of ~500
+        splits["train"] = splits["train"][:10]
+        splits["valid"] = splits["valid"][:10]
+    
+    print("Images train: ", len(splits["train"]))
+    print("Images valid", len(splits["valid"]))
+    print("Images test", len(splits["test"]))
+    
     model = train(args, splits, hparams, name)
     if model is None:
         wandb.finish 
@@ -98,6 +111,7 @@ def main(args):
     model = model.to(device)
     model.model = model.model.to(device)
     eval_model(args=ed(inpath=hparams["checkpoint_callback"]["dirpath"],
+                       batch_size=hparams["val_parameters"]["batch_size"],
                        subset='test',
                        exp=None,
                        thresh=.5,
@@ -108,8 +122,8 @@ def main(args):
               )
         
     
-    real_mask_PATH = hparams["mask_path"]
-    real_img_PATH = hparams["image_path"]
+    # real_mask_PATH = hparams["mask_path"]
+    # real_img_PATH = hparams["image_path"]
     write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test',
                   maskp=hparams["mask_path"], imgp=hparams["image_path"])
         

@@ -1,0 +1,34 @@
+#!/bin/bash
+source .venv/bin/activate
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=0
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=1
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=2
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=3
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=4
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=5
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=6
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=7
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=8
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=9
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=10
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=11
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=12
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=13
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=14
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=15
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=16
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=17
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=18
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=19
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=20
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=21
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=22
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=23
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=24
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=25
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=26
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=27
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=28
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=29
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=30
+python crossval_perexp.py --config_path=configs/baseline.yaml --dataset=v10 --tag=lotocv --discard_results=true --seed=7 --tube=31

@@ -11,7 +11,7 @@ easydict
 PyYAML
 torch
 torchvision
-pandas
+pandas==1.3.5
 sklearn
 opencv-python
 IPython

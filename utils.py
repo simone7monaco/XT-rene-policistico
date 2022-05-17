@@ -299,7 +299,7 @@ def load_rgb(image_path: Union[Path, str], lib: str = "cv2") -> np.array:
 
 def pad_to_size(
     target_size: Tuple[int, int],
-    image: np.array,
+    image: np.ndarray,
     bboxes: Optional[np.ndarray] = None,
     keypoints: Optional[np.ndarray] = None,
 ) :

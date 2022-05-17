@@ -1,3 +1,4 @@
+from datetime import datetime
 import argparse
 import os
 from pathlib import Path
@@ -36,15 +37,10 @@ def get_args():
     
     parser.add_argument('-m', '--alternative_model', type=str, default=None, help="Select model different from U++.")
     parser.add_argument('--tag', type=str, default=None, help="Add a tag to Wandb.")
-#     parser.add_argument('-bs', '--b_search', type=str2bool, help="Internal bs configuration", nargs='?', const=True, default=False)
-    
-#     parser.add_argument('-a', '--active_attention_layers', help="List of Active Attention layer (between 1~4). Write [1,3] to set AAL on blocks 1 and 3.", default=None)
-#     parser.add_argument('-a1', '--active_attention_layer1', type=str2bool, help="Activate Attention layer 1", nargs='?', const=True, default=False)
-#     parser.add_argument('-a2', '--active_attention_layer2', type=str2bool, help="Activate Attention layer 2", nargs='?', const=True, default=False)
-#     parser.add_argument('-a3', '--active_attention_layer3', type=str2bool, help="Activate Attention layer 3", nargs='?', const=True, default=False)
-#     parser.add_argument('-a4', '--active_attention_layer4', type=str2bool, help="Activate Attention layer 4", nargs='?', const=True, default=False)
-#     --batch_size=8 --lr=0.005 --model=unet --optimizer=adamp --scheduler=cosannealing
-    
+#     parser.add_argument('-bs', '--b_search', type=str2bool, help="Internal bs configuration", nargs='?', const=True, default=False)    
+
+    parser.add_argument('--debug', type=str2bool, default=False, help = "If enabled skip checks and logging")
+
     return parser.parse_args()
 
 
@@ -70,13 +66,13 @@ def init_training(config):
 
 
 def train(config, splits, hparams, name=None):
-#     wandb.login()
-    run = wandb.init(project="at_nature",
-                     entity="rene-policistico", config=hparams,
-                     settings=wandb.Settings(start_method='fork'),
-                     tags=[config.tag] if config.tag else None, reinit=True,
-                     name=name
-                    )
+    if not config.debug:
+        run = wandb.init(project="at_nature",
+                        entity="rene-policistico", config=hparams,
+                        settings=wandb.Settings(start_method='fork'),
+                        tags=[config.tag] if config.tag else None, reinit=True,
+                        name=name
+                        )
     model = SegmentCyst(hparams, splits,
                         discard_res=config.discard_results,
                         alternative_model=config.alternative_model
@@ -104,10 +100,11 @@ def train(config, splits, hparams, name=None):
         hparams["train_parameters"]["batch_size"] = hparams["max_supported_bs"]    
         
     if config.dataset != 'nw':
-        dataset = run.use_artifact(f'rene-policistico/upp/dataset:{config.dataset}', type='dataset')
-        data_dir = dataset.download()
-    #     data_dir = f"artifacts/dataset:{config.dataset}"
-
+        if not config.debug:
+            dataset = run.use_artifact(f'rene-policistico/upp/dataset:{config.dataset}', type='dataset')
+            data_dir = dataset.download()
+        else:
+            data_dir = f"artifacts/dataset:{config.dataset}"
         if not (Path(data_dir) / "images").exists():
             zippath = next(Path(data_dir).iterdir())
             with ZipFile(zippath, 'r') as zip_ref:
@@ -122,24 +119,12 @@ def train(config, splits, hparams, name=None):
     else:
         hparams["image_path"] = Path(hparams["image_path"])
         hparams["mask_path"] = Path(hparams["mask_path"])
-    
 
-#     if "activate_attention_layers" in dir(model.model):
-#         if config.active_attention_layers:
-#             active_attention_layers = ast.literal_eval(config.active_attention_layers)
-#         else:
-#             active_attention_layers = [
-#                 i+1 for i, act in enumerate([
-#                     config.active_attention_layer1,
-#                     config.active_attention_layer2,
-#                     config.active_attention_layer3,
-#                     config.active_attention_layer4
-#                 ]) if act]
+    if not config.debug:
+        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
+    else:
+        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-#         print(f"> Activating attention layers {active_attention_layers}")
-#         model.model.activate_attention_layers(active_attention_layers)
-
-    hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
     hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
 
     
@@ -151,15 +136,15 @@ def train(config, splits, hparams, name=None):
     with (hparams["checkpoint_callback"]["dirpath"] / "split_samples.pickle").open('wb') as file:
         pickle.dump(splits, file)
     print(f'\nSaving in {hparams["checkpoint_callback"]["dirpath"]}\n')
-
-    logger = WandbLogger()
-    logger.log_hyperparams(hparams)
-    logger.watch(model, log='all', log_freq=1)
+    if not config.debug:
+        logger = WandbLogger()
+        logger.log_hyperparams(hparams)
+        logger.watch(model, log='all', log_freq=1)
 
     trainer = pl.Trainer(
         gpus=1 if torch.cuda.is_available() else 0,
         accumulate_grad_batches=config.acc_grad if hasattr(config, 'acc_grad') else 1,
-        max_epochs=100,
+        max_epochs=100 if not config.debug else 1,
     #     distributed_backend="ddp",  # DistributedDataParallel
         # progress_bar_refresh_rate=1,
         benchmark=True,
@@ -168,15 +153,14 @@ def train(config, splits, hparams, name=None):
                   ],
         precision=16 if torch.cuda.is_available() else 32,
         gradient_clip_val=5.0,
-        num_sanity_val_steps=3,
+        num_sanity_val_steps=3 if not config.debug else 0,
         sync_batchnorm=True,
-        logger=logger,
+        logger=logger if not config.debug else False,
     #     resume_from_checkpoint="cyst_checkpoints/prova1/epoch=20-step=8546.ckpt"
     )
-    print("PRE FIT")
     trainer.fit(model)
-    print("POST FIT")
-    model.logger.experiment.log({"max_val_iou": model.max_val_iou})
+    if not config.debug:
+        model.logger.experiment.log({"max_val_iou": model.max_val_iou})
     return model
 
 

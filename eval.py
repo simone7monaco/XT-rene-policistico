@@ -51,23 +51,24 @@ def eval_model(args, model, save_fps=False):
         always_apply=False, max_pixel_value=255.0,
         mean=[0.485,0.456,0.406], p=1,std=[0.229,0.224,0.225]
     )
-
-
+    
     if args.subset:
         res_PATH = res_PATH / args.subset
         res_PATH.mkdir(exist_ok=True, parents=True)
-        
         with open(args.inpath / 'split_samples.pickle', 'rb') as file:
-            samples = pickle.load(file)[args.subset]
+            p = pickle.load(file)
+            samples = p[args.subset]
     else:
         d_fold = sorted(Path('artifacts').iterdir(), key=lambda n: int(n.stem.split(':v')[-1]))[-1]
         samples = get_samples(d_fold / 'images', d_fold / 'masks')
+
+    assert samples is not None, "test set is empty, select a tube with '--tube'"
 
     dataset = SegmentationDataset(samples, transform, length=None)
 
     dataloader = DataLoader(
             dataset,
-            batch_size=4,
+            batch_size=args.batch_size,
             shuffle=False,
             pin_memory=True,
             drop_last=False,
