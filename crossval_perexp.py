@@ -17,7 +17,7 @@ from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
 from eval import eval_model
 from train import train
-
+from argparse import Namespace
 from write_results import *
 from albumentations.core.serialization import from_dict
 
@@ -48,6 +48,46 @@ def get_args():
     parser.add_argument('--debug', type=str2bool, default=False, help = "If enabled skip checks and logging")
     
     return parser.parse_args()
+
+
+def _get_splits(hparams: dict, args: Namespace) -> dict[str, list]:
+    """
+    Returns:
+        {
+            'train': [
+                (
+                    PosixPath('artifacts/dataset:v7/images/TUBI 29-30.07.2020_CTRL 1 40x16 side B.jpg'),
+                    PosixPath('artifacts/dataset:v7/masks/TUBI 29-30.07.2020_CTRL 1 40x16 side B.png')
+                ),
+                (
+                    PosixPath('artifacts/dataset:v7/images/TUBULI ADPKD 11.12.2020_CTRL 11 B 40X24.jpg'),
+                    PosixPath('artifacts/dataset:v7/masks/TUBULI ADPKD 11.12.2020_CTRL 11 B 40X24.png')
+                ),
+                ...
+            ]
+            'valid': [ ... ],
+            'test': [ ... ]
+        }
+    """
+    splits = split_dataset(hparams,
+                        k=args.k, # k-th fold
+                        test_exp=args.exp, # If not None LOEO
+                        leave_one_out=args.tube, # LOTO tube number
+                        strat_nogroups=args.stratify_fold, # k-fold valid
+                        single_exp=args.single_exp) # Select 1 exp, e.g. only pics from Dec 2020
+    
+
+    if args.debug:
+        print(splits.keys())
+        print("DEBUG: reducing dataset")
+        # Take 10 images instead of ~500
+        splits["train"] = splits["train"][:10]
+        splits["valid"] = splits["valid"][:10]
+    
+    print("Images train: ", len(splits["train"]))
+    print("Images valid", len(splits["valid"]))
+    print("Images test", len(splits["test"]))
+    return splits
 
 
 def main(args):
@@ -82,24 +122,8 @@ def main(args):
     print(f"          fold: {args.k}       ")
     print("---------------------------------------\n")
     
-    splits = split_dataset(hparams, k=args.k,
-                           test_exp=args.exp,
-                           leave_one_out=args.tube,
-                           strat_nogroups=args.stratify_fold,
-                           single_exp=args.single_exp)
-    
+    splits = _get_splits(hparams, args)
 
-    if args.debug:
-        print(splits.keys())
-        print("DEBUG: reducing dataset")
-        # Take 10 images instead of ~500
-        splits["train"] = splits["train"][:10]
-        splits["valid"] = splits["valid"][:10]
-    
-    print("Images train: ", len(splits["train"]))
-    print("Images valid", len(splits["valid"]))
-    print("Images test", len(splits["test"]))
-    
     model = train(args, splits, hparams, name)
     if model is None:
         wandb.finish 
@@ -134,3 +158,5 @@ def main(args):
 if __name__ == '__main__':
     args = get_args()
     main(args)
+
+

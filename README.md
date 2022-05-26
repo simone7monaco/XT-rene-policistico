@@ -1,7 +1,30 @@
 # rene-policistico
 
-## Prerequisites
+## Project structure
+Pre-train
+- *crossval_perexp.py*: for k-fold cross-validation
+- *./loto.sh*: runs multiple times *crossval_perexp.py*
 
+Post-train
+- *annotation_original_preprocessing.py*: clean json files created with labelme
+- *create_mask.ipynb*: create and visualize binary masks from annotations
+
+Lib
+- *c_hist_utils.py*
+- *dataloaders.py*
+- *eval.py*: used by *crossval_perexp.py*
+- *experiment.py*: used by *crossval_perexp.py* and *train.py*
+- *train.py*: used by *crossval_perexp.py*
+
+To undestand
+- *pr_bar_charts.py*
+- *simplify_names.py*
+- *sweep_params.py*
+- *Tuning_params.py*
+- *utils.py*
+- *write_results.py*
+
+## Prerequisites
 ```
 numpy
 Pillow
@@ -25,9 +48,3 @@ thop
 pytorch_lightning
 wandb
 ```
-
-Example: `python train.py -c configs/baseline.yaml`
-
-## Data preprocessing
-* `annotation_original_preprocessing.py`: Clean json files created with labelme.
-* `create_mask.ipynb`: Create and visualize binary masks from annotations.
