@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils import object_from_dict, print_usage, find_average, state_dict_from_disk, get_samples
 import torchvision.utils as vutils
 # from Models.networks.network import Comprehensive_Atten_Unet
-
+from MyDataset.MyDataset import MyDataset
 
 from dataloaders import SegmentationDataset
 from metrics import binary_mean_iou
@@ -119,11 +119,10 @@ class SegmentCyst(pl.LightningModule):
             num_train = int((1 - self.hparams["val_split"]) * len(samples))
             self.train_samples = samples[:num_train]
             self.val_samples = samples[num_train:]
-
         print("Len train samples = ", len(self.train_samples))
         print("Len val samples = ", len(self.val_samples))
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         train_aug = from_dict(self.hparams["train_aug"])
 
         if "epoch_length" not in self.hparams["train_parameters"]:
@@ -131,23 +130,32 @@ class SegmentCyst(pl.LightningModule):
         else:
             epoch_length = self.hparams["train_parameters"]["epoch_length"]
 
+
+        # dataset = SegmentationDataset(self.train_samples, train_aug, epoch_length)
+        dataset = MyDataset(self.train_samples, train_aug, epoch_length)
+
         result = DataLoader(
-            SegmentationDataset(self.train_samples, train_aug, epoch_length),
+            dataset=dataset,
             batch_size=self.hparams["train_parameters"]["batch_size"],
             num_workers=self.hparams["num_workers"],
             shuffle=True,
             pin_memory=True,
             drop_last=True,
         )
+
         
         print("Train dataloader = ", len(result))
         return result
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         val_aug = from_dict(self.hparams["val_aug"])
 
+
+        # dataset = SegmentationDataset(self.val_samples, val_aug, length=None)
+        dataset = MyDataset(self.train_samples, val_aug, epoch_length)
+
         result = DataLoader(
-            SegmentationDataset(self.val_samples, val_aug, length=None),
+            dataset,
             batch_size=self.hparams["val_parameters"]["batch_size"],
             num_workers=self.hparams["num_workers"],
             shuffle=False,
@@ -184,7 +192,9 @@ class SegmentCyst(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         features = batch["features"]
         masks = batch["masks"]
-                
+
+        print("TR STEP", batch["features"].shape, batch["masks"].shape)
+
         if self.model_name in ['uacanet', 'pranet']:
             logits = self.forward(features, masks)
             total_loss = logits['loss']

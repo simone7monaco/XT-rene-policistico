@@ -10,11 +10,11 @@ Post-train
 - *create_mask.ipynb*: create and visualize binary masks from annotations
 
 Lib
+- *train.py*: used by *crossval_perexp.py*
+- *eval.py*: used by *crossval_perexp.py*
+- *experiment.py*: LightningModule
 - *c_hist_utils.py*
 - *dataloaders.py*
-- *eval.py*: used by *crossval_perexp.py*
-- *experiment.py*: used by *crossval_perexp.py* and *train.py*
-- *train.py*: used by *crossval_perexp.py*
 
 To undestand
 - *pr_bar_charts.py*

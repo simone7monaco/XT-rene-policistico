@@ -6,7 +6,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 from .utils import get_stacks
-
+from typing import List, Tuple
 
 class MyDataset(Dataset):
     def __init__(
@@ -30,7 +30,7 @@ class MyDataset(Dataset):
         print(f"Using {len(self.stacks)} images")
 
     def __getitem__(self, index: int):
-        (img1, img2, img3), mask_path, _ = self.stacks[index]
+        (img1, img2, img3), mask_path, stack_name = self.stacks[index]
         # From paths to arrays
         arr_np = _get_array(img1, img2, img3, mask_path)
         """
@@ -40,13 +40,17 @@ class MyDataset(Dataset):
         This if differentiate train and test (not validation)
         """
         arr = torch.Tensor(arr_np)
-        if self.dsType == "train":
-            arr = self.transform(arr)
+        arr = self.transform(arr)
         stack, mask = arr[0:9], arr[9]
 
         # (128, 128) to (1, 128, 128)
         mask = torch.unsqueeze(mask, 0)
-        return mask_path.name, stack, mask
+
+        return {
+            "image_id": stack_name, # TODO: Check if it's correct
+            "features": stack, # e.g. [9, 512, 512]
+            "masks": mask, # e.g. [1, 512, 512]
+        }
 
     def __len__(self):
         return len(self.stacks)
