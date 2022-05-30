@@ -157,3 +157,5 @@ send_custom
 *img
 *.zip
 *.sbatch
+
+.vscode

@@ -91,6 +91,7 @@ def _get_splits(hparams: dict, args: Namespace) -> dict[str, list]:
 
 
 def main(args):
+    print("Running cross validation")
     os.environ["WANDB_START_METHOD"] = "fork"
 #     os.environ["WANDB_RUN_GROUP"] = "loto_cv_newdf"
 #     torch.cuda.empty_cache()
@@ -122,6 +123,21 @@ def main(args):
     print(f"          fold: {args.k}       ")
     print("---------------------------------------\n")
     
+
+    # Download datast if not existing
+    if args.dataset != 'nw':
+        if not args.debug:
+            run = wandb.init(project="3d",
+                            entity="rene-policistico", config=hparams,
+                            settings=wandb.Settings(start_method='fork'),
+                            tags=[args.tag] if args.tag else None, reinit=True,
+                            name=name
+                            )
+            # upp (is 2d) or 3d
+            dataset = run.use_artifact(f'rene-policistico/3d/dataset:{args.dataset}', type='dataset')
+            data_dir = dataset.download()
+            print("Downloading....")
+
     splits = _get_splits(hparams, args)
 
     model = train(args, splits, hparams, name)

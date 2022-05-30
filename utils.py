@@ -12,7 +12,7 @@ from write_results import date_to_exp
 
 def get_id2_file_paths(path: Union[str, Path]) -> Dict[str, Path]:
     paths = {x.stem: x for x in Path(path).glob("*.*")}
-    assert paths, "No images available, maybe you didn't log into wandb?"
+    assert paths, "No images available, maybe you didn't download the dataset?"
     return paths
 
 

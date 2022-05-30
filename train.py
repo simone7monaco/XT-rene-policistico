@@ -67,7 +67,7 @@ def init_training(config):
 
 def train(config, splits, hparams, name=None):
     if not config.debug:
-        run = wandb.init(project="at_nature",
+        run = wandb.init(project="3d",
                         entity="rene-policistico", config=hparams,
                         settings=wandb.Settings(start_method='fork'),
                         tags=[config.tag] if config.tag else None, reinit=True,
@@ -101,7 +101,8 @@ def train(config, splits, hparams, name=None):
         
     if config.dataset != 'nw':
         if not config.debug:
-            dataset = run.use_artifact(f'rene-policistico/upp/dataset:{config.dataset}', type='dataset')
+            # upp (is 2d) or 3d
+            dataset = run.use_artifact(f'rene-policistico/3d/dataset:{config.dataset}', type='dataset')
             data_dir = dataset.download()
         else:
             data_dir = f"artifacts/dataset:{config.dataset}"
