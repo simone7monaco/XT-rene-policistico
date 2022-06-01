@@ -73,9 +73,9 @@ def train(config, splits, hparams, name=None):
                         tags=[config.tag] if config.tag else None, reinit=True,
                         name=name
                         )
-    model = SegmentCyst(hparams, splits,
+    model = SegmentCyst(hparams, config.debug, splits,
                         discard_res=config.discard_results,
-                        alternative_model=config.alternative_model
+                        alternative_model=config.alternative_model,
                        )
     
     if config.alternative_model:
@@ -107,6 +107,7 @@ def train(config, splits, hparams, name=None):
         else:
             data_dir = f"artifacts/dataset:{config.dataset}"
         if not (Path(data_dir) / "images").exists():
+            print("Not existing")
             zippath = next(Path(data_dir).iterdir())
             with ZipFile(zippath, 'r') as zip_ref:
                 zip_ref.extractall(data_dir)

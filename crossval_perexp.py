@@ -26,7 +26,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", default="configs/baseline.yaml")
-    parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='latest')
+    parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='v1')
     parser.add_argument("--tag", type=str, help="Add custom tag on the wandb run (only one tag is supported).", default=None)#'loto_cv_with5')
     
     parser.add_argument("-e", "--exp", default=None, type=int, help="Experiment to put in test set")
@@ -48,46 +48,6 @@ def get_args():
     parser.add_argument('--debug', type=str2bool, default=False, help = "If enabled skip checks and logging")
     
     return parser.parse_args()
-
-
-def _get_splits(hparams: dict, args: Namespace) -> dict[str, list]:
-    """
-    Returns:
-        {
-            'train': [
-                (
-                    PosixPath('artifacts/dataset:v7/images/TUBI 29-30.07.2020_CTRL 1 40x16 side B.jpg'),
-                    PosixPath('artifacts/dataset:v7/masks/TUBI 29-30.07.2020_CTRL 1 40x16 side B.png')
-                ),
-                (
-                    PosixPath('artifacts/dataset:v7/images/TUBULI ADPKD 11.12.2020_CTRL 11 B 40X24.jpg'),
-                    PosixPath('artifacts/dataset:v7/masks/TUBULI ADPKD 11.12.2020_CTRL 11 B 40X24.png')
-                ),
-                ...
-            ]
-            'valid': [ ... ],
-            'test': [ ... ]
-        }
-    """
-    splits = split_dataset(hparams,
-                        k=args.k, # k-th fold
-                        test_exp=args.exp, # If not None LOEO
-                        leave_one_out=args.tube, # LOTO tube number
-                        strat_nogroups=args.stratify_fold, # k-fold valid
-                        single_exp=args.single_exp) # Select 1 exp, e.g. only pics from Dec 2020
-    
-
-    if args.debug:
-        print(splits.keys())
-        print("DEBUG: reducing dataset")
-        # Take 10 images instead of ~500
-        splits["train"] = splits["train"][:10]
-        splits["valid"] = splits["valid"][:10]
-    
-    print("Images train: ", len(splits["train"]))
-    print("Images valid", len(splits["valid"]))
-    print("Images test", len(splits["test"]))
-    return splits
 
 
 def main(args):
@@ -133,14 +93,13 @@ def main(args):
                             tags=[args.tag] if args.tag else None, reinit=True,
                             name=name
                             )
-            # upp (is 2d) or 3d
+            # Directory: 'upp' for 2d, or '3d'
             dataset = run.use_artifact(f'rene-policistico/3d/dataset:{args.dataset}', type='dataset')
-            data_dir = dataset.download()
-            print("Downloading....")
+            dataset.download()
 
-    splits = _get_splits(hparams, args)
-
-    model = train(args, splits, hparams, name)
+    # splits = _get_splits(hparams, args)
+    # model = train(args, splits, hparams, name)
+    model = train(args, None, hparams, name)
     if model is None:
         wandb.finish 
         return

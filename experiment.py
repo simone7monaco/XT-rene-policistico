@@ -34,9 +34,11 @@ import pytorch_lightning as pl
 import wandb
 import numpy as np
 import os
+from torchvision import transforms
 
 
 def get_model(alternative_model, hparams):
+    print("GETTING MODEL", alternative_model)
     if alternative_model == 'colonsegnet':
         model = CompNet()
     elif alternative_model == 'pranet':
@@ -71,21 +73,19 @@ def get_model(alternative_model, hparams):
     
 
 class SegmentCyst(pl.LightningModule):
-    def __init__(self, hparams, splits=[None, None], discard_res=False, alternative_model=None):
+    def __init__(self, hparams, debug: bool, splits=[None, None], discard_res=False, alternative_model=None):
         super().__init__()
-        
+        self.debug = debug
         self.model_name = alternative_model
         self.model = get_model(alternative_model, hparams)
-        
+        print(self.model)
         self.discard_res = discard_res
-        # print("HPARAMS", hparams)
         self.hparams.update(hparams)
         self.train_images = Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/train_predictions"
         self.train_images.mkdir(exist_ok=True, parents=True)
         self.val_images =  Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/valid_predictions"
         self.val_images.mkdir(exist_ok=True, parents=True)
         
-            
             
         if "resume_from_checkpoint" in self.hparams:
             corrections: Dict[str, str] = {"model.": ""}
@@ -103,8 +103,8 @@ class SegmentCyst(pl.LightningModule):
             ("jaccard", 0.1, JaccardLoss(mode="binary", from_logits=True)),
             ("f1", 0.9, BinarySoftF1Loss()),
         ]
-        self.train_samples=splits['train']
-        self.val_samples=splits['valid']
+        # self.train_samples=splits['train']
+        # self.val_samples=splits['valid']
         self.max_val_iou = 0
 
     def forward(self, batch: torch.Tensor, masks: torch.Tensor=None) -> torch.Tensor:
@@ -114,16 +114,33 @@ class SegmentCyst(pl.LightningModule):
             return self.model(batch)
 
     def setup(self, stage=0):
-        if self.train_samples is None:
-            samples = get_samples(self.hparams["image_path"], self.hparams["mask_path"])
-            num_train = int((1 - self.hparams["val_split"]) * len(samples))
-            self.train_samples = samples[:num_train]
-            self.val_samples = samples[num_train:]
-        print("Len train samples = ", len(self.train_samples))
-        print("Len val samples = ", len(self.val_samples))
+        # if self.train_samples is None:
+        #     samples = get_samples(self.hparams["image_path"], self.hparams["mask_path"])
+        #     num_train = int((1 - self.hparams["val_split"]) * len(samples))
+        #     self.train_samples = samples[:num_train]
+        #     self.val_samples = samples[num_train:]
+        # print("Len train samples = ", len(self.train_samples))
+        # print("Len val samples = ", len(self.val_samples))
+
+        # TODO: Get list of tubules
+        # TODO: Split in test, train, validation this list
+
+        from utils import get_tubules_from_json, get_dataloaders
+        tubules = get_tubules_from_json()
+        tube = self.hparams["tube"]
+        self.tubs_tr, self.tubs_val, self.tubs_test = get_dataloaders(tube, tubules)
+    
+
 
     def train_dataloader(self) -> DataLoader:
-        train_aug = from_dict(self.hparams["train_aug"])
+        # train_aug = from_dict(self.hparams["train_aug"])
+        train_aug = transforms.Compose(
+            [
+                transforms.RandomCrop(size=(512, 512)),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomVerticalFlip(p=0.5),
+            ]
+        )
 
         if "epoch_length" not in self.hparams["train_parameters"]:
             epoch_length = None
@@ -132,7 +149,7 @@ class SegmentCyst(pl.LightningModule):
 
 
         # dataset = SegmentationDataset(self.train_samples, train_aug, epoch_length)
-        dataset = MyDataset(self.train_samples, train_aug, epoch_length)
+        dataset = MyDataset(512, train_aug, self.tubs_tr, self.debug)
 
         result = DataLoader(
             dataset=dataset,
@@ -149,10 +166,13 @@ class SegmentCyst(pl.LightningModule):
 
     def val_dataloader(self) -> DataLoader:
         val_aug = from_dict(self.hparams["val_aug"])
-
+        val_aug = transforms.Compose(
+            [
+            ]
+        )
 
         # dataset = SegmentationDataset(self.val_samples, val_aug, length=None)
-        dataset = MyDataset(self.train_samples, val_aug, epoch_length)
+        dataset = MyDataset(512, val_aug, self.tubs_val, self.debug)
 
         result = DataLoader(
             dataset,
@@ -192,8 +212,6 @@ class SegmentCyst(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         features = batch["features"]
         masks = batch["masks"]
-
-        print("TR STEP", batch["features"].shape, batch["masks"].shape)
 
         if self.model_name in ['uacanet', 'pranet']:
             logits = self.forward(features, masks)

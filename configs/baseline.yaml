@@ -11,6 +11,7 @@ max_supported_bs: 8
 model:
   type: segmentation_models_pytorch.UnetPlusPlus
   encoder_name: resnet50
+  in_channels: 9
   classes: 1
   encoder_weights: imagenet
 

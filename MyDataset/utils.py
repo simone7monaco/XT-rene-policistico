@@ -15,15 +15,17 @@ def get_stacks(images_path: Path, masks_path: Path, tubules: list) -> list:
     Returns list of: ((img1, img2, img3), path_mask, dest_name)
 
     For example:
-    (
+    [
         (
-            PosixPath('tubule 1 zstack 1.jpg'),
-            PosixPath('tubule 1 zstack 2.jpg'),
-            PosixPath('tubule 1 zstack 3.jpg'),
-        ),
-        PosixPath('tubule 1 zstack 2.png'),
-        'tubule1zstack1__tubule1zstack2__tubule1zstack3'
-    )
+            (
+                PosixPath('tubule 1 zstack 1.jpg'),
+                PosixPath('tubule 1 zstack 2.jpg'),
+                PosixPath('tubule 1 zstack 3.jpg'),
+            ),
+            PosixPath('tubule 1 zstack 2.png'),
+            'tubule1zstack1__tubule1zstack2__tubule1zstack3'
+        )
+    ]
     """
     stacks = []
     # e.g. Sett 2019/tubule 1

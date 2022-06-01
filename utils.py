@@ -8,6 +8,7 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import StratifiedKFold, GroupKFold
 import cv2
 from write_results import date_to_exp
+from sklearn.model_selection import train_test_split
 
 
 def get_id2_file_paths(path: Union[str, Path]) -> Dict[str, Path]:
@@ -406,3 +407,88 @@ def unpad_from_size(
         result["keypoints"] = keypoints
 
     return result
+
+import json
+import os
+from pathlib import Path
+
+
+def get_tubules_from_json():
+    """Split train / validation / test dataset"""
+    # Generate json if doesn't exist
+    json_dir = Path("tubules-list.json")
+    if not json_dir.exists():
+        raise FileNotFoundError
+    #     _generate_json(json_dir)
+    # Import tubule list from json
+    with open(json_dir, "r") as f:
+        tubules = json.load(f)
+    return tubules
+
+
+def get_dataloaders(tubule_to_exclude: int, tubules: list) -> tuple:
+    """Make tubules split in train, valid and test
+
+    Args:
+        tubule_to_exclude (int): number of tubule to exclude
+        tubules (list): list of tubules
+
+    Returns:
+        tuple: 3 datasets
+    """
+    # Do not edit original list
+    tubules = tubules.copy()
+    tubule_test = tubules.pop(tubule_to_exclude)
+
+    # Train / Validation tubules
+    exps = _tubule_by_exp(tubules)
+    tubs_tr, tubs_val = [], []
+    for exp_name, tubules in exps.items():
+        train, valid = train_test_split(tubules, test_size=0.2)
+        print(
+            f"All: {len(tubules)} - Train: {len(train)} - Val: {len(valid)} - {exp_name}"
+        )
+        tubs_tr += train
+        tubs_val += valid
+
+    return tubs_tr, tubs_val, [tubule_test]
+
+
+def _tubule_by_exp(tubules: list) -> dict:
+    """Args:
+        tubules (list): [
+            "Dicembre 2020/tubule 1",
+            "Dicembre 2020/tubule 2",
+            "Ott 2019/tubule 2",
+            "Ott 2019/tubule 2"
+        ]
+
+    Returns:
+        dict: {
+            "Dicembre 2020": [
+                "Dicembre 2020/tubule 1",
+                "Dicembre 2020/tubule 2"
+            ]
+            "Ott 2019": [
+                "Ott 2019/tubule 1",
+                "Ott 2019/tubule 2"
+            ],
+        }
+    """
+    exps = set()
+    for tubule_dir in tubules:
+        exp_name, _ = tubule_dir.split("/")
+        # exps: {'Ott 2019', 'Dicembre 2020', ...}
+        exps.add(exp_name)
+
+    # exps_ls: {'Ott 2019': [], 'Dicembre 2020': [], ...}
+    exps_ls: dict = {exp: [] for exp in exps}
+
+    for tubule_dir in tubules:
+        exp_name, _ = tubule_dir.split("/")
+        # exps_ls: {
+        #     "Ott 2019": ["Ott 2019/tubule 1", "Ott 2019/tubule 2"],
+        #     "Dicembre 2020": ["Dicembre 2020/tubule 1", "Dicembre 2020/tubule 2"]
+        # }
+        exps_ls[exp_name].append(tubule_dir)
+    return exps_ls
