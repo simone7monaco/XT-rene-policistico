@@ -258,7 +258,7 @@ def py2cfg(file_path: Union[str, Path]) -> ConfigDict:
 def get_class( kls ):
     parts = kls.split('.')
     module = ".".join(parts[:-1])
-    print(module)
+    print("MODULE", module)
     m = __import__( module )
     for comp in parts[1:]:
         m = getattr(m, comp)

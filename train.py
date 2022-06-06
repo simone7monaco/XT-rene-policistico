@@ -66,6 +66,7 @@ def init_training(config):
 
 
 def train(config, splits, hparams, name=None):
+    print("START TRAINING")
     if not config.debug:
         run = wandb.init(project="3d",
                         entity="rene-policistico", config=hparams,
@@ -77,7 +78,7 @@ def train(config, splits, hparams, name=None):
                         discard_res=config.discard_results,
                         alternative_model=config.alternative_model,
                        )
-    
+    print("MODEL")
     if config.alternative_model:
         with open("configs/searched_params.yaml") as f:
             bs_results = yaml.load(f, Loader=yaml.SafeLoader)
@@ -98,7 +99,9 @@ def train(config, splits, hparams, name=None):
         else:
             setattr(config, "acc_grad", accumulated_ratio)
         hparams["train_parameters"]["batch_size"] = hparams["max_supported_bs"]    
-        
+
+    print("CONFIG DATASET")
+
     if config.dataset != 'nw':
         if not config.debug:
             # upp (is 2d) or 3d
@@ -122,16 +125,18 @@ def train(config, splits, hparams, name=None):
         hparams["image_path"] = Path(hparams["image_path"])
         hparams["mask_path"] = Path(hparams["mask_path"])
 
-    if not config.debug:
-        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
-    else:
-        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # if not config.debug:
+    #     hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
+    # else:
+    # TODO: check if it works correctly without debug, otherwise use above if
+    hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
 
-    
+    print("CHECKPOINT_CALLBACK", hparams["checkpoint_callback"]["dirpath"])
     checkpoint_callback = object_from_dict(hparams["checkpoint_callback"])
-    if any(hparams["checkpoint_callback"]["dirpath"].iterdir()): return
+    if any(hparams["checkpoint_callback"]["dirpath"].iterdir()):
+        raise FileExistsError("Directory already exists")
 
     earlystopping_callback = object_from_dict(hparams["earlystopping_callback"])
     
@@ -146,7 +151,7 @@ def train(config, splits, hparams, name=None):
     trainer = pl.Trainer(
         gpus=1 if torch.cuda.is_available() else 0,
         accumulate_grad_batches=config.acc_grad if hasattr(config, 'acc_grad') else 1,
-        max_epochs=100 if not config.debug else 1,
+        max_epochs=100 if not config.debug else 2,
     #     distributed_backend="ddp",  # DistributedDataParallel
         # progress_bar_refresh_rate=1,
         benchmark=True,
@@ -160,7 +165,9 @@ def train(config, splits, hparams, name=None):
         logger=logger if not config.debug else False,
     #     resume_from_checkpoint="cyst_checkpoints/prova1/epoch=20-step=8546.ckpt"
     )
+    print("FITTING")
     trainer.fit(model)
+    print("FITTING END")
     if not config.debug:
         model.logger.experiment.log({"max_val_iou": model.max_val_iou})
     return model

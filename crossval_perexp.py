@@ -96,11 +96,14 @@ def main(args):
             # Directory: 'upp' for 2d, or '3d'
             dataset = run.use_artifact(f'rene-policistico/3d/dataset:{args.dataset}', type='dataset')
             dataset.download()
+            print("DATASET DOWNLOADED")
 
     # splits = _get_splits(hparams, args)
     # model = train(args, splits, hparams, name)
+    print("INITIALIZING TRAIN")
     model = train(args, None, hparams, name)
     if model is None:
+        print("MODEL IS NONE")
         wandb.finish 
         return
 
@@ -109,12 +112,15 @@ def main(args):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
     model.model = model.model.to(device)
+    print("EVALUATING")
     eval_model(args=ed(inpath=hparams["checkpoint_callback"]["dirpath"],
                        batch_size=hparams["val_parameters"]["batch_size"],
+                       tube=hparams['tube'],
                        subset='test',
                        exp=None,
                        thresh=.5,
-                       outpath='result'
+                       outpath='result',
+                       debug=args.debug
                       ),
                model=model,
                save_fps=True

@@ -38,7 +38,6 @@ from torchvision import transforms
 
 
 def get_model(alternative_model, hparams):
-    print("GETTING MODEL", alternative_model)
     if alternative_model == 'colonsegnet':
         model = CompNet()
     elif alternative_model == 'pranet':
@@ -78,7 +77,6 @@ class SegmentCyst(pl.LightningModule):
         self.debug = debug
         self.model_name = alternative_model
         self.model = get_model(alternative_model, hparams)
-        print(self.model)
         self.discard_res = discard_res
         self.hparams.update(hparams)
         self.train_images = Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/train_predictions"
@@ -128,8 +126,7 @@ class SegmentCyst(pl.LightningModule):
         from utils import get_tubules_from_json, get_dataloaders
         tubules = get_tubules_from_json()
         tube = self.hparams["tube"]
-        self.tubs_tr, self.tubs_val, self.tubs_test = get_dataloaders(tube, tubules)
-    
+        self.tubs_tr, self.tubs_val, _ = get_dataloaders(tube, tubules)    
 
 
     def train_dataloader(self) -> DataLoader:

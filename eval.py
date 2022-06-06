@@ -17,6 +17,8 @@ import segmentation_models_pytorch as smp
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from torchvision import transforms
+from MyDataset.MyDataset import MyDataset
 
 from utils import (
     get_samples,
@@ -51,21 +53,27 @@ def eval_model(args, model, save_fps=False):
         always_apply=False, max_pixel_value=255.0,
         mean=[0.485,0.456,0.406], p=1,std=[0.229,0.224,0.225]
     )
-    
-    if args.subset:
-        res_PATH = res_PATH / args.subset
-        res_PATH.mkdir(exist_ok=True, parents=True)
-        with open(args.inpath / 'split_samples.pickle', 'rb') as file:
-            p = pickle.load(file)
-            samples = p[args.subset]
-    else:
-        d_fold = sorted(Path('artifacts').iterdir(), key=lambda n: int(n.stem.split(':v')[-1]))[-1]
-        samples = get_samples(d_fold / 'images', d_fold / 'masks')
+    test_aug = transforms.Compose([]) # Replace with transform?
 
-    assert samples is not None, "test set is empty, select a tube with '--tube'"
+    # if args.subset:
+    #     res_PATH = res_PATH / args.subset
+    #     res_PATH.mkdir(exist_ok=True, parents=True)
+    #     with open(args.inpath / 'split_samples.pickle', 'rb') as file:
+    #         print("PATTTH", args.inpath / 'split_samples.pickle')
+    #         p = pickle.load(file)
+    #         samples = p[args.subset]
+    # else:
+    #     d_fold = sorted(Path('artifacts').iterdir(), key=lambda n: int(n.stem.split(':v')[-1]))[-1]
+    #     samples = get_samples(d_fold / 'images', d_fold / 'masks')
 
-    dataset = SegmentationDataset(samples, transform, length=None)
+    # assert samples is not None, "test set is empty, select a tube with '--tube'"
+    # dataset = SegmentationDataset(samples, transform, length=None)
 
+    from utils import get_tubules_from_json, get_dataloaders
+    tubules = get_tubules_from_json()
+    _, _, tubs_test = get_dataloaders(args.tube, tubules)
+
+    dataset = MyDataset(512, test_aug, tubs_test, args.debug)
     dataloader = DataLoader(
             dataset,
             batch_size=args.batch_size,
