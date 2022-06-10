@@ -15,11 +15,12 @@ class MyDataset(Dataset):
         tileSz: int,
         transform: albu.Compose,
         tubules: list,
-        debug:bool,
+        debug: bool,
     ):
         """
         Args:
             tileSz (int): Crop size (e.g. 128, 256, 512)
+            transform (albu.Compose)
             tubules (list): ["Ott 2019/tubule 1", "Ott 2019/tubule 2"]
         """
         self.tileSz = tileSz

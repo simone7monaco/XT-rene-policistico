@@ -73,10 +73,10 @@ def eval_model(args, model, save_fps=False):
     tubules = get_tubules_from_json()
     _, _, tubs_test = get_dataloaders(args.tube, tubules)
 
-    dataset = MyDataset(512, test_aug, tubs_test, args.debug)
+    dataset = MyDataset(512, test_aug, tubs_test, False)
     dataloader = DataLoader(
             dataset,
-            batch_size=args.batch_size,
+            batch_size=1,
             shuffle=False,
             pin_memory=True,
             drop_last=False,

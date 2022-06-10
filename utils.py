@@ -258,7 +258,6 @@ def py2cfg(file_path: Union[str, Path]) -> ConfigDict:
 def get_class( kls ):
     parts = kls.split('.')
     module = ".".join(parts[:-1])
-    print("MODULE", module)
     m = __import__( module )
     for comp in parts[1:]:
         m = getattr(m, comp)
@@ -492,3 +491,12 @@ def _tubule_by_exp(tubules: list) -> dict:
         # }
         exps_ls[exp_name].append(tubule_dir)
     return exps_ls
+
+class PathEncoder(json.JSONEncoder):
+    def default(self, obj):
+        from pathlib import PosixPath
+
+        if isinstance(obj, PosixPath):
+            return str(obj)
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)

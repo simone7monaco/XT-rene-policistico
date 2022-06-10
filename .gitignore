@@ -138,8 +138,8 @@ masks/
 dataset/
 drive_directory/
 artifacts/
-wandb/
-cyst_checkpoints/
+wandb
+cyst_checkpoints
 .old/
 Process_images.ipynb
 Tiling.py

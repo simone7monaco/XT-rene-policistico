@@ -83,7 +83,6 @@ def main(args):
     print(f"          fold: {args.k}       ")
     print("---------------------------------------\n")
     
-
     # Download datast if not existing
     if args.dataset != 'nw':
         if not args.debug:
@@ -97,11 +96,14 @@ def main(args):
             dataset = run.use_artifact(f'rene-policistico/3d/dataset:{args.dataset}', type='dataset')
             dataset.download()
             print("DATASET DOWNLOADED")
+        else:
+            run = None
+            
 
     # splits = _get_splits(hparams, args)
     # model = train(args, splits, hparams, name)
-    print("INITIALIZING TRAIN")
-    model = train(args, None, hparams, name)
+
+    model = train(args, None, hparams, run, name)
     if model is None:
         print("MODEL IS NONE")
         wandb.finish 

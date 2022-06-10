@@ -12,7 +12,7 @@ def get_files(path: Path) -> list:
 
 def get_stacks(images_path: Path, masks_path: Path, tubules: list) -> list:
     """
-    Returns list of: ((img1, img2, img3), path_mask, dest_name)
+    Returns: list of ((img1, img2, img3), path_mask, dest_name)
 
     For example:
     [

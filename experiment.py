@@ -8,8 +8,16 @@ from torch import nn
 
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import object_from_dict, print_usage, find_average, state_dict_from_disk, get_samples
+from utils import (
+    object_from_dict,
+    print_usage,
+    find_average,
+    state_dict_from_disk,
+    get_samples,
+    PathEncoder
+)
 import torchvision.utils as vutils
+
 # from Models.networks.network import Comprehensive_Atten_Unet
 from MyDataset.MyDataset import MyDataset
 
@@ -17,6 +25,7 @@ from dataloaders import SegmentationDataset
 from metrics import binary_mean_iou
 
 import segmentation_models_pytorch as smp
+
 # from ColonSegNet import CompNet
 # from Pranet_lib.PraNet_Res2Net import PraNet
 from HarDNetMSEG.lib.HarDMSEG import HarDMSEG
@@ -35,32 +44,41 @@ import wandb
 import numpy as np
 import os
 from torchvision import transforms
+import pickle
+from utils import get_tubules_from_json, get_dataloaders
+import json
 
 
 def get_model(alternative_model, hparams):
-    if alternative_model == 'colonsegnet':
+    if alternative_model == "colonsegnet":
         model = CompNet()
-    elif alternative_model == 'pranet':
-        conf = ed(yaml.load(open(Path.home() / "my_rene-policistico/UACANet/configs/PraNet.yaml"), yaml.FullLoader))
+    elif alternative_model == "pranet":
+        conf = ed(
+            yaml.load(
+                open(Path.home() / "my_rene-policistico/UACANet/configs/PraNet.yaml"),
+                yaml.FullLoader,
+            )
+        )
         model = eval(conf.Model.name)(conf.Model)
-        hparams["model"] = {
-            'type': model.__module__,
-            'opt': conf.Model
-        }
-    elif alternative_model == 'hardnet':
+        hparams["model"] = {"type": model.__module__, "opt": conf.Model}
+    elif alternative_model == "hardnet":
         model = HarDMSEG()
 
-    elif alternative_model == 'pspnet':
-        model = smp.PSPNet(encoder_name='resnet50', encoder_weights='imagenet')
+    elif alternative_model == "pspnet":
+        model = smp.PSPNet(encoder_name="resnet50", encoder_weights="imagenet")
 
-    elif alternative_model == 'uacanet':
-        conf = ed(yaml.load(open(Path.home() / "my_rene-policistico/UACANet/configs/UACANet-L.yaml"), yaml.FullLoader))
+    elif alternative_model == "uacanet":
+        conf = ed(
+            yaml.load(
+                open(
+                    Path.home() / "my_rene-policistico/UACANet/configs/UACANet-L.yaml"
+                ),
+                yaml.FullLoader,
+            )
+        )
         model = eval(conf.Model.name)(conf.Model)
-        hparams["model"] = {
-            'type': model.__module__,
-            'opt': conf.Model
-        }
-    elif alternative_model == 'unet':
+        hparams["model"] = {"type": model.__module__, "opt": conf.Model}
+    elif alternative_model == "unet":
         hparams["model"]["type"] = "segmentation_models_pytorch.Unet"
         model = object_from_dict(hparams["model"])
 
@@ -69,22 +87,34 @@ def get_model(alternative_model, hparams):
 
     hparams["model"]["type"] = str(model.__class__).split("'")[1]
     return model
-    
+
 
 class SegmentCyst(pl.LightningModule):
-    def __init__(self, hparams, debug: bool, splits=[None, None], discard_res=False, alternative_model=None):
+    def __init__(
+        self,
+        hparams,
+        debug: bool,
+        splits=[None, None],
+        discard_res=False,
+        alternative_model=None,
+    ):
         super().__init__()
         self.debug = debug
         self.model_name = alternative_model
         self.model = get_model(alternative_model, hparams)
         self.discard_res = discard_res
         self.hparams.update(hparams)
-        self.train_images = Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/train_predictions"
+        self.train_images = (
+            Path(self.hparams["checkpoint_callback"]["dirpath"])
+            / "images/train_predictions"
+        )
         self.train_images.mkdir(exist_ok=True, parents=True)
-        self.val_images =  Path(self.hparams["checkpoint_callback"]["dirpath"]) / "images/valid_predictions"
+        self.val_images = (
+            Path(self.hparams["checkpoint_callback"]["dirpath"])
+            / "images/valid_predictions"
+        )
         self.val_images.mkdir(exist_ok=True, parents=True)
-        
-            
+
         if "resume_from_checkpoint" in self.hparams:
             corrections: Dict[str, str] = {"model.": ""}
 
@@ -105,7 +135,7 @@ class SegmentCyst(pl.LightningModule):
         # self.val_samples=splits['valid']
         self.max_val_iou = 0
 
-    def forward(self, batch: torch.Tensor, masks: torch.Tensor=None) -> torch.Tensor:
+    def forward(self, batch: torch.Tensor, masks: torch.Tensor = None) -> torch.Tensor:
         if masks is not None:
             return self.model(batch, masks)
         else:
@@ -120,14 +150,31 @@ class SegmentCyst(pl.LightningModule):
         # print("Len train samples = ", len(self.train_samples))
         # print("Len val samples = ", len(self.val_samples))
 
-        # TODO: Get list of tubules
-        # TODO: Split in test, train, validation this list
-
-        from utils import get_tubules_from_json, get_dataloaders
         tubules = get_tubules_from_json()
         tube = self.hparams["tube"]
-        self.tubs_tr, self.tubs_val, _ = get_dataloaders(tube, tubules)    
+        self.tubs_tr, self.tubs_val, self.tubs_test = get_dataloaders(tube, tubules)
 
+        with (
+            self.hparams["checkpoint_callback"]["dirpath"] / "split_tubules.json"
+        ).open("w") as f:
+            splits = {
+                "train": self.tubs_tr,
+                "validation": self.tubs_val,
+                "test": self.tubs_test,
+            }
+            json_obj = json.dumps(splits)
+            f.write(json_obj)
+
+        with (
+            self.hparams["checkpoint_callback"]["dirpath"] / "split_images.json"
+        ).open("w") as f:
+            images = {
+                "train": self.train_dataloader().dataset.stacks,
+                "validation": self.val_dataloader().dataset.stacks,
+                "test": MyDataset(None, None, self.tubs_test, False).stacks,
+            }
+            json_obj = json.dumps(images, cls=PathEncoder)
+            f.write(json_obj)
 
     def train_dataloader(self) -> DataLoader:
         # train_aug = from_dict(self.hparams["train_aug"])
@@ -144,7 +191,6 @@ class SegmentCyst(pl.LightningModule):
         else:
             epoch_length = self.hparams["train_parameters"]["epoch_length"]
 
-
         # dataset = SegmentationDataset(self.train_samples, train_aug, epoch_length)
         dataset = MyDataset(512, train_aug, self.tubs_tr, self.debug)
 
@@ -157,16 +203,12 @@ class SegmentCyst(pl.LightningModule):
             drop_last=True,
         )
 
-        
         print("Train dataloader = ", len(result))
         return result
 
     def val_dataloader(self) -> DataLoader:
         val_aug = from_dict(self.hparams["val_aug"])
-        val_aug = transforms.Compose(
-            [
-            ]
-        )
+        val_aug = transforms.Compose([])
 
         # dataset = SegmentationDataset(self.val_samples, val_aug, length=None)
         dataset = MyDataset(512, val_aug, self.tubs_val, self.debug)
@@ -182,38 +224,37 @@ class SegmentCyst(pl.LightningModule):
 
         print("Val dataloader = ", len(result))
 
-#         self.logger.experiment.log({"val_input_image": [wandb.Image(result["mask"].cpu(), caption="val_input_image")]})
+        #         self.logger.experiment.log({"val_input_image": [wandb.Image(result["mask"].cpu(), caption="val_input_image")]})
 
         return result
-    
+
     def configure_optimizers(self):
         optimizer = object_from_dict(
             self.hparams["optimizer"],
             params=[x for x in self.model.parameters() if x.requires_grad],
         )
         self.optimizers = [optimizer]
-        
+
         if self.hparams["scheduler"] is not None:
             scheduler = object_from_dict(self.hparams["scheduler"], optimizer=optimizer)
 
             if type(scheduler) == ReduceLROnPlateau:
-                    return {
-                       'optimizer': optimizer,
-                       'lr_scheduler': scheduler,
-                       'monitor': 'val_iou'
-                   }
+                return {
+                    "optimizer": optimizer,
+                    "lr_scheduler": scheduler,
+                    "monitor": "val_iou",
+                }
             return self.optimizers, [scheduler]
         return self.optimizers
-    
-    
+
     def training_step(self, batch, batch_idx):
         features = batch["features"]
         masks = batch["masks"]
 
-        if self.model_name in ['uacanet', 'pranet']:
+        if self.model_name in ["uacanet", "pranet"]:
             logits = self.forward(features, masks)
-            total_loss = logits['loss']
-            logits = logits['pred']
+            total_loss = logits["loss"]
+            logits = logits["pred"]
         else:
             logits = self.forward(features)
             total_loss = 0
@@ -221,12 +262,13 @@ class SegmentCyst(pl.LightningModule):
                 ls_mask = loss(logits, masks)
                 total_loss += weight * ls_mask
                 self.log(f"train_mask_{loss_name}", ls_mask)
-        
+
+        # Thresholding
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
         self.log("train_iou", binary_mean_iou(logits, masks))
-#         batch_size = self.hparams["train_parameters"]["batch_size"]
-        
+        #         batch_size = self.hparams["train_parameters"]["batch_size"]
+
         if not self.discard_res:
             if self.trainer.current_epoch % 5 == 0:
                 class_labels = {0: "background", 1: "cyst"}
@@ -246,7 +288,9 @@ class SegmentCyst(pl.LightningModule):
                     )
                     fname = batch["image_id"][i]
 
-                    self.logger.experiment.log({"generated_images": [mask_img]}, commit=False)
+                    self.logger.experiment.log(
+                        {"generated_images": [mask_img]}, commit=False
+                    )
             # self.log("images_train", mask_img)
 
         # print(logits.shape, features.shape)
@@ -258,19 +302,20 @@ class SegmentCyst(pl.LightningModule):
 
     def _get_current_lr(self) -> torch.Tensor:
         lr = [x["lr"] for x in self.optimizers[0].param_groups][0]  # type: ignore
-        
-        if torch.cuda.is_available(): return torch.Tensor([lr])[0].cuda()
+
+        if torch.cuda.is_available():
+            return torch.Tensor([lr])[0].cuda()
         return torch.Tensor([lr])[0]
 
     def validation_step(self, batch, batch_id):
         features = batch["features"]
         masks = batch["masks"]
         result = {}
-        
-        if self.model_name in ['uacanet', 'pranet']:
+
+        if self.model_name in ["uacanet", "pranet"]:
             logits = self.forward(features, masks)
-            result["valid_loss"] = logits['loss']
-            logits = logits['pred']
+            result["valid_loss"] = logits["loss"]
+            logits = logits["pred"]
         else:
             logits = self.forward(features)
             total_loss = 0
@@ -278,11 +323,11 @@ class SegmentCyst(pl.LightningModule):
                 ls_mask = loss(logits, masks)
                 total_loss += weight * ls_mask
             result["valid_loss"] = total_loss
-            
+
         logits_ = (logits > 0.5).cpu().detach().numpy().astype("float")
 
         result["val_iou"] = binary_mean_iou(logits, masks)
-        
+
         if not self.discard_res:
             if self.trainer.current_epoch % 5 == 0:
                 class_labels = {0: "background", 1: "cyst"}
@@ -300,17 +345,18 @@ class SegmentCyst(pl.LightningModule):
                     },
                 )
                 self.logger.experiment.log({"valid_images": [mask_img]}, commit=False)
-            
+
         self.log("valid_loss", result["valid_loss"])
         self.log("val_iou", result["val_iou"])
         return result
 
     def validation_epoch_end(self, outputs):
+        # TODO: pass epoch as float instead of int
         self.log("epoch", self.trainer.current_epoch)
 
         avg_val_iou = find_average(outputs, "val_iou")
-        
+
         self.log("val_iou", avg_val_iou)
-        
+
         self.max_val_iou = max(self.max_val_iou, avg_val_iou)
         return

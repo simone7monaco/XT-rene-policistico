@@ -390,7 +390,6 @@ def missed_wrong_cysts_dict(gt: np.array, pred: np.array, cutoff=288): #TODO: Sp
 def write_results(folder:Path, is_jpg=False, maskp=None, imgp=None):
     folder.mkdir(exist_ok=True)
     np.seterr('raise')
-    print("WRITE RESULTS", folder)
     datafile_im = folder / "images_table.csv"
     datafile_cy = folder / "cysts_table.csv"
     if datafile_im.exists():

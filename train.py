@@ -65,15 +65,8 @@ def init_training(config):
     return splits, hparams
 
 
-def train(config, splits, hparams, name=None):
+def train(config, splits, hparams, run, name=None):
     print("START TRAINING")
-    if not config.debug:
-        run = wandb.init(project="3d",
-                        entity="rene-policistico", config=hparams,
-                        settings=wandb.Settings(start_method='fork'),
-                        tags=[config.tag] if config.tag else None, reinit=True,
-                        name=name
-                        )
     model = SegmentCyst(hparams, config.debug, splits,
                         discard_res=config.discard_results,
                         alternative_model=config.alternative_model,
@@ -99,8 +92,6 @@ def train(config, splits, hparams, name=None):
         else:
             setattr(config, "acc_grad", accumulated_ratio)
         hparams["train_parameters"]["batch_size"] = hparams["max_supported_bs"]    
-
-    print("CONFIG DATASET")
 
     if config.dataset != 'nw':
         if not config.debug:
@@ -133,15 +124,16 @@ def train(config, splits, hparams, name=None):
 
     hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
 
-    print("CHECKPOINT_CALLBACK", hparams["checkpoint_callback"]["dirpath"])
     checkpoint_callback = object_from_dict(hparams["checkpoint_callback"])
     if any(hparams["checkpoint_callback"]["dirpath"].iterdir()):
         raise FileExistsError("Directory already exists")
 
     earlystopping_callback = object_from_dict(hparams["earlystopping_callback"])
-    
-    with (hparams["checkpoint_callback"]["dirpath"] / "split_samples.pickle").open('wb') as file:
-        pickle.dump(splits, file)
+
+    # Moved pickle export to experiment.py -> def setup
+    # with (hparams["checkpoint_callback"]["dirpath"] / "split_samples.pickle").open('wb') as file:
+    #     pickle.dump(splits, file)
+
     print(f'\nSaving in {hparams["checkpoint_callback"]["dirpath"]}\n')
     if not config.debug:
         logger = WandbLogger()
@@ -165,9 +157,9 @@ def train(config, splits, hparams, name=None):
         logger=logger if not config.debug else False,
     #     resume_from_checkpoint="cyst_checkpoints/prova1/epoch=20-step=8546.ckpt"
     )
-    print("FITTING")
+    print("Training phase start")
     trainer.fit(model)
-    print("FITTING END")
+    print("Training phase end")
     if not config.debug:
         model.logger.experiment.log({"max_val_iou": model.max_val_iou})
     return model
@@ -177,4 +169,4 @@ if __name__ == "__main__":
     args = get_args()
     splits, hparams = init_training(args)
     
-    train(args, splits, hparams)
+    train(args, splits, hparams, run)
