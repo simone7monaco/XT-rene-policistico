@@ -71,5 +71,5 @@ def _get_stack(paths_img, masks_path):
         + "__"
         + img_next.replace(" ", "")
     )
-    return paths_img, mask, name
+    return paths_img, mask, img_mid # paths_img, mask, name
 

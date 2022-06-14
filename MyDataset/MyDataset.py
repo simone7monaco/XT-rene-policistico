@@ -62,9 +62,8 @@ class MyDataset(Dataset):
 
         # (128, 128) to (1, 128, 128)
         mask = torch.unsqueeze(mask, 0)
-
         return {
-            "image_id": stack_name,  # TODO: Check if it's correct
+            "image_id": stack_name,
             "features": stack,  # e.g. [9, 512, 512]
             "masks": mask,  # e.g. [1, 512, 512]
         }
