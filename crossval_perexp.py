@@ -108,7 +108,6 @@ def main(args):
         print("MODEL IS NONE")
         wandb.finish 
         return
-
     
 #     if args.eval_network:
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -127,8 +126,7 @@ def main(args):
                model=model,
                save_fps=True
               )
-        
-    
+
     # real_mask_PATH = hparams["mask_path"]
     # real_img_PATH = hparams["image_path"]
     write_results(hparams["checkpoint_callback"]["dirpath"]/'result'/'test',

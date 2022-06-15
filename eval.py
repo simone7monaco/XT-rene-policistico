@@ -20,13 +20,7 @@ import numpy as np
 from torchvision import transforms
 from MyDataset.MyDataset import MyDataset
 
-from utils import (
-    get_samples,
-    object_from_dict,
-    pad_to_size,
-    state_dict_from_disk,
-    tensor_from_rgb_image,
-)
+from utils import object_from_dict
 
 
 def get_args():

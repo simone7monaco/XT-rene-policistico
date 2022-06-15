@@ -29,6 +29,3 @@ python crossval_perexp.py --config_path=configs/baseline.yaml --tag=lotocv --dis
 python crossval_perexp.py --config_path=configs/baseline.yaml --tag=lotocv --discard_results=true --seed=7 --tube=26
 python crossval_perexp.py --config_path=configs/baseline.yaml --tag=lotocv --discard_results=true --seed=7 --tube=27
 python crossval_perexp.py --config_path=configs/baseline.yaml --tag=lotocv --discard_results=true --seed=7 --tube=28
-python crossval_perexp.py --config_path=configs/baseline.yaml --tag=lotocv --discard_results=true --seed=7 --tube=29
-python crossval_perexp.py --config_path=configs/baseline.yaml --tag=lotocv --discard_results=true --seed=7 --tube=30
-python crossval_perexp.py --config_path=configs/baseline.yaml --tag=lotocv --discard_results=true --seed=7 --tube=31

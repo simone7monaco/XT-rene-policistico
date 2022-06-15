@@ -116,11 +116,10 @@ def train(config, splits, hparams, run, name=None):
         hparams["image_path"] = Path(hparams["image_path"])
         hparams["mask_path"] = Path(hparams["mask_path"])
 
-    # if not config.debug:
-    #     hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
-    # else:
-    # TODO: check if it works correctly without debug, otherwise use above if
-    hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if not config.debug:
+        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
+    else:
+        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
 
