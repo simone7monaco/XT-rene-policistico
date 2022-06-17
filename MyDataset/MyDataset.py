@@ -84,10 +84,11 @@ def _get_array(img1: Path, img2: Path, img3: Path, mask: Path) -> np.ndarray:
     Returns:
         np.ndarray: Concatenated array of size (10, 1024, 1024)
     """
-    arr_img1 = _get_img_array(img1)
+    # arr_img1 = _get_img_array(img1)
+    arr_img1 = np.zeros((3, 1024, 1024), dtype=np.uint8)
     arr_img2 = _get_img_array(img2)
-    # arr_img2 = np.zeros((3, 1024, 1024), dtype=np.uint8)
-    arr_img3 = _get_img_array(img3)
+    # arr_img3 = _get_img_array(img3)
+    arr_img3 = np.zeros((3, 1024, 1024), dtype=np.uint8)
 
     # 9 for the images, 1 for the mask
     arr_mask = np.asanyarray(Image.open(mask), dtype=np.uint8)

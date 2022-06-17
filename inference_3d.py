@@ -1,53 +1,31 @@
-# import pickle
 import torch
-
-# import pandas as pd
-# from time import time
 from PIL import Image
 from pathlib import Path
 import argparse
-
-# from dataloaders import SegmentationDataset
 from torch.utils.data import DataLoader
-
-# import albumentations as albu
 from tqdm import tqdm
 from scipy.stats import logistic
-
-# from HarDNetMSEG.lib.HarDMSEG import HarDMSEG
-# import segmentation_models_pytorch as smp
-# from utils import get_tubules_from_json, get_dataloaders
-
-# import matplotlib.pyplot as plt
-# import seaborn as sns
 import numpy as np
 from torchvision import transforms
 from MyDataset.MyDataset import MyDataset
-
-from utils import (
-    # get_samples,
-    object_from_dict,
-    # pad_to_size,
-    # state_dict_from_disk,
-    # tensor_from_rgb_image,
-)
+from utils import object_from_dict
 from argparse import Namespace
 import json
-from write_results import write_results
 
 
-def load_split_tubules():
-    with open(args.inpath / "split_tubules.json") as f:
+DEVICE = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
+
+
+def load_split_tubules(ckpt_path: Path):
+    with open(ckpt_path / "split_tubules.json") as f:
         tubules = json.load(f)
     assert tubules["train"] and tubules["validation"] and tubules["test"]
     return tubules
 
 
-def eval_model(args: Namespace, model, res_PATH: Path, save_fps=False):
-    res_PATH.mkdir(exist_ok=True, parents=True)
-
+def eval_model(args: Namespace, model, ckpt_path: Path):
     test_aug = transforms.Compose([])
-    tubules = load_split_tubules()
+    tubules = load_split_tubules(ckpt_path)
     tubs_test = tubules["test"]
     dataset = MyDataset(512, test_aug, tubs_test, False)
     dataloader = DataLoader(
@@ -58,15 +36,18 @@ def eval_model(args: Namespace, model, res_PATH: Path, save_fps=False):
         drop_last=False,
     )
 
-    if any(res_PATH.glob("*.png")):
-        print(f" Overwriting test images for {args.inpath}")
-    #     return
+    result_dir = ckpt_path / "inference_3d"
+    result_dir.mkdir(exist_ok=True)
+    if any(result_dir.glob("*.png")):
+        # print(f"Overwriting test images for {ckpt_path}")
+        print(f"Skipping {ckpt_path}")
+        return
 
-    desc = f"Test model ({'/'.join(str(args.inpath).split('/')[-2:])})"
+    desc = f"Test model ({'/'.join(str(ckpt_path).split('/')[-2:])})"
     model.eval()
     with torch.no_grad():
         for data in tqdm(dataloader, desc=desc):
-            x = data["features"].to(device)
+            x = data["features"].to(DEVICE)
             batch_result = model(x)
             if type(batch_result) == dict:
                 batch_result = batch_result["pred"]
@@ -75,20 +56,34 @@ def eval_model(args: Namespace, model, res_PATH: Path, save_fps=False):
                 result = batch_result[i][0]
                 result = logistic.cdf(result.cpu().numpy())
                 result = (result > args.thresh).astype(np.uint8)
-                Image.fromarray(result * 255).save(res_PATH / f"{name}.png")
+                Image.fromarray(result * 255).save(result_dir / f"{name}.png")
+
+
+def load_model(ckpt_path: Path):
+    print("Loading model:", ckpt_path)
+    # Load model and weights
+    checkpoint = torch.load(
+        next(ckpt_path.glob("*.ckpt")), map_location=lambda storage, loc: storage
+    )
+    model = object_from_dict(checkpoint["hyper_parameters"]["model"])
+    model = model.to(DEVICE)
+    state_dict = {k.split("model.")[-1]: v for k, v in checkpoint["state_dict"].items()}
+    model.load_state_dict(state_dict)
+    return model
+    # Compute metrics with write_results on generated images: Moved to notebook
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=f"Test network for selected experiment or for teh full dataset."
     )
-    parser.add_argument(
-        "-i",
-        "--inpath",
-        type=Path,
-        required=True,
-        help="Path in which to find the model weights. Example: 'cyst_checkpoints/Nature_v3/2022-06-12 17:03:49'",
-    )
+    # parser.add_argument(
+    #     "-i",
+    #     "--inpath",
+    #     type=Path,
+    #     required=True,
+    #     help="Path in which to find the model weights. Example: 'cyst_checkpoints/Nature_v3/2022-06-12 17:03:49'",
+    # )
     parser.add_argument(
         "-t",
         "--thresh",
@@ -98,25 +93,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Load model and weights
-    device = (
-        torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
-    )
-    checkpoint = torch.load(
-        next(args.inpath.glob("*.ckpt")), map_location=lambda storage, loc: storage
-    )
-    model = object_from_dict(checkpoint["hyper_parameters"]["model"])
-    model = model.to(device)
-    state_dict = {k.split("model.")[-1]: v for k, v in checkpoint["state_dict"].items()}
-    model.load_state_dict(state_dict)
+    runs_dir = Path("cyst_checkpoints") / "Nature_v3"
+    dirs = sorted(runs_dir.glob("crossval_tube_*"))
+    assert dirs, "No tubules to scan"
 
-    res_PATH = args.inpath / "inference_3d"
-    # Start testing
-    eval_model(args, model, res_PATH)
-
-    # Compute metrics on generated images: Moved to notebook
-    # write_results(
-    #     res_PATH,
-    #     imgp="artifacts/dataset:v7/images",
-    #     maskp="artifacts/dataset:v7/masks",
-    # )
+    for d in dirs:
+        model = load_model(d)
+        eval_model(args, model, d)
