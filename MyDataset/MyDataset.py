@@ -16,6 +16,7 @@ class MyDataset(Dataset):
         transform: albu.Compose,
         tubules: list,
         debug: bool,
+        arch: str,
     ):
         """
         Args:
@@ -30,7 +31,9 @@ class MyDataset(Dataset):
         self.masks_path = ROOT / "masks-png"
         self.transform = transform
         self.stacks = get_stacks(self.images_path, self.masks_path, tubules)
-
+        assert arch in ["2d", "3d"]
+        self.arch = arch
+        print("Arch:", arch)
         if debug:
             print("=======================")
             print(f"DEBUG: reducing dataset from: {len(self.stacks)} to 10")
@@ -45,7 +48,7 @@ class MyDataset(Dataset):
     def __getitem__(self, index: int):
         (img1, img2, img3), mask_path, stack_name = self.stacks[index]
         # From paths to arrays
-        arr_np = _get_array(img1, img2, img3, mask_path)
+        arr_np = _get_array(img1, img2, img3, mask_path, self.arch)
         # img_np = _get_array_wo_mask(img1, img2, img3)
         # mask_np = _get_mask(mask_path)
         """
@@ -72,7 +75,7 @@ class MyDataset(Dataset):
         return len(self.stacks)
 
 
-def _get_array(img1: Path, img2: Path, img3: Path, mask: Path) -> np.ndarray:
+def _get_array(img1: Path, img2: Path, img3: Path, mask: Path, arch: str) -> np.ndarray:
     """Concatenate 3 images and it's mask in one array
 
     Args:
@@ -80,15 +83,18 @@ def _get_array(img1: Path, img2: Path, img3: Path, mask: Path) -> np.ndarray:
         img2 (Path): Path of the 2nd image, size (3, 1024, 1024)
         img3 (Path): Path of the 3rd image, size (3, 1024, 1024)
         mask (Path): Path of the mask, size (1024, 1024)
+        arch (Path): 3d shows 3 pictures, 2d shows only 1
 
     Returns:
         np.ndarray: Concatenated array of size (10, 1024, 1024)
     """
-    # arr_img1 = _get_img_array(img1)
-    arr_img1 = np.zeros((3, 1024, 1024), dtype=np.uint8)
+    arr_img1 = _get_img_array(img1)
     arr_img2 = _get_img_array(img2)
-    # arr_img3 = _get_img_array(img3)
-    arr_img3 = np.zeros((3, 1024, 1024), dtype=np.uint8)
+    arr_img3 = _get_img_array(img3)
+
+    if arch == "2d":
+        arr_img1 = np.zeros((3, 1024, 1024), dtype=np.uint8)
+        arr_img3 = np.zeros((3, 1024, 1024), dtype=np.uint8)
 
     # 9 for the images, 1 for the mask
     arr_mask = np.asanyarray(Image.open(mask), dtype=np.uint8)

@@ -93,12 +93,15 @@ class SegmentCyst(pl.LightningModule):
     def __init__(
         self,
         hparams,
+        arch: str,
         debug: bool,
         splits=[None, None],
         discard_res=False,
         alternative_model=None,
     ):
         super().__init__()
+        assert arch in ["2d", "3d"]
+        self.arch = arch
         self.debug = debug
         self.model_name = alternative_model
         self.model = get_model(alternative_model, hparams)
@@ -171,7 +174,7 @@ class SegmentCyst(pl.LightningModule):
             images = {
                 "train": self.train_dataloader().dataset.stacks,
                 "validation": self.val_dataloader().dataset.stacks,
-                "test": MyDataset(None, None, self.tubs_test, False).stacks,
+                "test": MyDataset(None, None, self.tubs_test, False, self.arch).stacks,
             }
             json_obj = json.dumps(images, cls=PathEncoder)
             f.write(json_obj)
@@ -192,7 +195,7 @@ class SegmentCyst(pl.LightningModule):
             epoch_length = self.hparams["train_parameters"]["epoch_length"]
 
         # dataset = SegmentationDataset(self.train_samples, train_aug, epoch_length)
-        dataset = MyDataset(512, train_aug, self.tubs_tr, self.debug)
+        dataset = MyDataset(512, train_aug, self.tubs_tr, self.debug, self.arch)
 
         result = DataLoader(
             dataset=dataset,
@@ -211,7 +214,7 @@ class SegmentCyst(pl.LightningModule):
         val_aug = transforms.Compose([])
 
         # dataset = SegmentationDataset(self.val_samples, val_aug, length=None)
-        dataset = MyDataset(512, val_aug, self.tubs_val, self.debug)
+        dataset = MyDataset(512, val_aug, self.tubs_val, self.debug, self.arch)
 
         result = DataLoader(
             dataset,

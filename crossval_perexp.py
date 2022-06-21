@@ -26,7 +26,7 @@ import wandb
 def get_args():
     parser = argparse.ArgumentParser(description='CV with selected experiment as test set and train/val (+test) stratified from the others')
     parser.add_argument("-c", "--config_path", type=Path, help="Path to the config.", default="configs/baseline.yaml")
-    parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='v1')
+    parser.add_argument("-d", "--dataset", type=str, help="Select dataset version from wandb Artifact (v1, v2...), set to 'nw' (no WB) to use paths from the config file. Default is 'latest'.", default='v2')
     parser.add_argument("--tag", type=str, help="Add custom tag on the wandb run (only one tag is supported).", default=None)#'loto_cv_with5')
     
     parser.add_argument("-e", "--exp", default=None, type=int, help="Experiment to put in test set")
@@ -46,6 +46,7 @@ def get_args():
     parser.add_argument('--discard_results', nargs='?', type=str2bool, default=False, const=True, help = "Prevent Wandb to save validation result for each step.")
     
     parser.add_argument('--debug', type=str2bool, default=False, help = "If enabled skip checks and logging")
+    parser.add_argument('--arch', type=str, required=True, help = "'3d' or '2d'")
     
     return parser.parse_args()
 
@@ -124,7 +125,8 @@ def main(args):
                        debug=args.debug
                       ),
                model=model,
-               save_fps=True
+               save_fps=True,
+               arch=args.arch
               )
 
     # real_mask_PATH = hparams["mask_path"]

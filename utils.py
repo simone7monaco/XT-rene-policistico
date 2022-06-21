@@ -419,7 +419,6 @@ def get_tubules_from_json():
     if not json_dir.exists():
         raise FileNotFoundError
     #     _generate_json(json_dir)
-    # Import tubule list from json
     with open(json_dir, "r") as f:
         tubules = json.load(f)
     return tubules

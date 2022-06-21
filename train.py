@@ -67,7 +67,7 @@ def init_training(config):
 
 def train(config, splits, hparams, run, name=None):
     print("START TRAINING")
-    model = SegmentCyst(hparams, config.debug, splits,
+    model = SegmentCyst(hparams, config.arch, config.debug, splits,
                         discard_res=config.discard_results,
                         alternative_model=config.alternative_model,
                        )
@@ -119,7 +119,7 @@ def train(config, splits, hparams, run, name=None):
     if not config.debug:
         hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / wandb.run.name
     else:
-        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        hparams["checkpoint_callback"]["dirpath"] = Path(hparams["checkpoint_callback"]["dirpath"]) / datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
     hparams["checkpoint_callback"]["dirpath"].mkdir(exist_ok=True, parents=True)
 

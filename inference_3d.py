@@ -23,11 +23,11 @@ def load_split_tubules(ckpt_path: Path):
     return tubules
 
 
-def eval_model(args: Namespace, model, ckpt_path: Path):
+def eval_model(args: Namespace, model, ckpt_path: Path, arch: str):
     test_aug = transforms.Compose([])
     tubules = load_split_tubules(ckpt_path)
     tubs_test = tubules["test"]
-    dataset = MyDataset(512, test_aug, tubs_test, False)
+    dataset = MyDataset(512, test_aug, tubs_test, False, arch)
     dataloader = DataLoader(
         dataset,
         batch_size=1,
@@ -99,4 +99,4 @@ if __name__ == "__main__":
 
     for d in dirs:
         model = load_model(d)
-        eval_model(args, model, d)
+        eval_model(args, model, d) # TODO: import arch from args, be consistent with what the experiment used

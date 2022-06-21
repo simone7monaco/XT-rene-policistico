@@ -35,7 +35,7 @@ def get_args():
 
 device = torch.device("cuda", 0) if torch.cuda.is_available() else torch.device("cpu")
 
-def eval_model(args, model, save_fps=False):
+def eval_model(args, model, arch: str, save_fps=False):
     if args.exp:
         exp = args.exp[-1]
         args.inpath = Path(f"cv_perexp/exp{exp}")
@@ -67,7 +67,7 @@ def eval_model(args, model, save_fps=False):
     tubules = get_tubules_from_json()
     _, _, tubs_test = get_dataloaders(args.tube, tubules)
 
-    dataset = MyDataset(512, test_aug, tubs_test, False)
+    dataset = MyDataset(512, test_aug, tubs_test, False, arch)
     dataloader = DataLoader(
             dataset,
             batch_size=1,
@@ -113,15 +113,15 @@ def eval_model(args, model, save_fps=False):
         print(f" Test for {args.inpath} already done")
 
     
-if __name__ == '__main__':
-    args = get_args()
+# if __name__ == '__main__':
+#     args = get_args()
     
-    checkpoint = torch.load(next(args.inpath.glob("*.ckpt")), map_location=lambda storage, loc: storage)
-    model = object_from_dict(checkpoint['hyper_parameters']['model'])
-    model = model.to(device)
+#     checkpoint = torch.load(next(args.inpath.glob("*.ckpt")), map_location=lambda storage, loc: storage)
+#     model = object_from_dict(checkpoint['hyper_parameters']['model'])
+#     model = model.to(device)
     
-    state_dict = {k.split('model.')[-1]: v for k, v in checkpoint["state_dict"].items()}
+#     state_dict = {k.split('model.')[-1]: v for k, v in checkpoint["state_dict"].items()}
 
-    model.load_state_dict(state_dict)
+#     model.load_state_dict(state_dict)
 
-    eval_model(args, model)
+#     eval_model(args, model)
