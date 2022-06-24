@@ -24,7 +24,7 @@ class MyDataset(Dataset):
             transform (albu.Compose)
             tubules (list): ["Ott 2019/tubule 1", "Ott 2019/tubule 2"]
         """
-        self.tileSz = tileSz
+        self.tileSz = tileSz # TODO: Remove, it's passed through transforms
         # ROOT = Path("dataset")
         ROOT = Path("artifacts") / "dataset:v1"
         self.images_path = ROOT / "images"
@@ -36,10 +36,10 @@ class MyDataset(Dataset):
         print("Arch:", arch)
         if debug:
             print("=======================")
-            print(f"DEBUG: reducing dataset from: {len(self.stacks)} to 10")
+            print(f"DEBUG: reducing dataset from: {len(self.stacks)} to 20")
             print("=======================")
             # Take 10 images instead of ~500
-            self.stacks = self.stacks[:10]
+            self.stacks = self.stacks[:20]
 
 
         assert len(self.stacks) > 0, f"Dataset is empty ({tubules})"

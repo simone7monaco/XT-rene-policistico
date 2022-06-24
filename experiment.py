@@ -183,7 +183,8 @@ class SegmentCyst(pl.LightningModule):
         # train_aug = from_dict(self.hparams["train_aug"])
         train_aug = transforms.Compose(
             [
-                transforms.RandomCrop(size=(512, 512)),
+                # transforms.RandomCrop(size=(512, 512)),
+                transforms.RandomCrop(size=(256, 256)),
                 transforms.RandomHorizontalFlip(p=0.5),
                 transforms.RandomVerticalFlip(p=0.5),
             ]
@@ -210,7 +211,7 @@ class SegmentCyst(pl.LightningModule):
         return result
 
     def val_dataloader(self) -> DataLoader:
-        val_aug = from_dict(self.hparams["val_aug"])
+        # val_aug = from_dict(self.hparams["val_aug"])
         val_aug = transforms.Compose([])
 
         # dataset = SegmentationDataset(self.val_samples, val_aug, length=None)

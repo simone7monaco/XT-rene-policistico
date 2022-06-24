@@ -93,10 +93,13 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    runs_dir = Path("cyst_checkpoints") / "Nature_v3"
+    # runs_dir = Path("cyst_checkpoints") / "Nature_v3"
+    runs_dir = Path("cyst_checkpoints") / "3d_lug21_256"
     dirs = sorted(runs_dir.glob("crossval_tube_*"))
     assert dirs, "No tubules to scan"
 
     for d in dirs:
         model = load_model(d)
-        eval_model(args, model, d) # TODO: import arch from args, be consistent with what the experiment used
+        arch = d.stem[-2:]
+        assert arch in ["2d", "3d"]
+        eval_model(args, model, d, arch)

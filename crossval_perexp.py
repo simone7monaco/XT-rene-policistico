@@ -57,8 +57,9 @@ def main(args):
 #     os.environ["WANDB_RUN_GROUP"] = "loto_cv_newdf"
 #     torch.cuda.empty_cache()
 
+    # wandb name, e.g. crossval_tube_1_k_0_seed_7_lotocv
     name = f"crossval"
-    for kind in ["tube", "exp", "k", "seed", "alternative_model", "tag"]:
+    for kind in ["tube", "exp", "k", "seed", "alternative_model", "tag", "arch"]:
         if getattr(args, kind) is not None:
             n = f"_{kind}" if not "model" in kind else "_model"
             if kind == "tag": n = ""

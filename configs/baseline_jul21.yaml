@@ -22,7 +22,7 @@ scheduler:
   T_mult: 2
 
 train_parameters:
-  batch_size: 2
+  batch_size: 4
 
 checkpoint_callback:
   type: pytorch_lightning.callbacks.ModelCheckpoint
@@ -41,7 +41,7 @@ earlystopping_callback:
   mode: min
 
 val_parameters:
-  batch_size: 2
+  batch_size: 4
 
 optimizer:
   # type: adamp.AdamP
